@@ -229,7 +229,7 @@ $('save').onclick=async()=>{
   if(ins.error)throw ins.error;
   done.add(pend.cat);const sv=pend.cat+' '+v;cat=null;mark();$('shoot').disabled=true;$('hint').textContent='Pilih kategori berikutnya.';
   reset();m.className='msg ok';m.textContent='Tersimpan ✓ '+sv+' kg';
- }catch(e){m.className='msg err';m.textContent='Gagal menyimpan. Periksa sinyal lalu coba lagi.'}
+  }catch(e){m.className='msg err';m.textContent='Gagal menyimpan: '+(e.message||JSON.stringify(e))}
  $('save').disabled=false;
 };
 
