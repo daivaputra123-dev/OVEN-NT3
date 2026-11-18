@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#6B3E1F">
+<title>Oven NT3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bevan&family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+:root{--bg:#F6E7C8;--panel:#FFF6E2;--ink:#3B2314;--soft:#7a5a3e;--brown:#6B3E1F;--caramel:#B5762F;--gold:#E2B26A;--line:#D9BC8A;--rust:#A8431F;--ok:#4d6b2f}
+@media (prefers-color-scheme:dark){:root{--bg:#2a1809;--panel:#3a2312;--ink:#F6E7C8;--soft:#c9a77a;--brown:#E2B26A;--caramel:#D9923F;--line:#5b3c22;--rust:#e5826a;--ok:#a9c77d}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.55 Nunito,system-ui,sans-serif;background-image:radial-gradient(var(--line) 1.2px,transparent 1.3px);background-size:22px 22px;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+h1,h2{font-family:Bevan,Georgia,serif;font-weight:400;line-height:1.15;margin:0}
+button,input{font:inherit;color:inherit}button{cursor:pointer}
+:focus-visible{outline:3px solid var(--caramel);outline-offset:2px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 18px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:6px double var(--brown);margin-bottom:10px}
+.logo{font-family:Bevan,serif;font-size:1.6rem;color:var(--brown);background:none;border:0;padding:0}
+.who{font-weight:800;font-size:.95rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.btn{border:2.5px solid var(--ink);background:var(--gold);color:#3B2314;border-radius:12px;padding:14px 24px;font-weight:800;font-size:1.05rem;box-shadow:4px 4px 0 var(--ink);transition:transform .1s,box-shadow .1s}
+.btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+.btn.alt{background:var(--panel);color:var(--ink)}.btn.danger{background:var(--rust);color:#fff}
+.btn.sm{padding:6px 12px;box-shadow:2px 2px 0 var(--ink);font-size:.9rem}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.hero{display:grid;grid-template-columns:1.1fr 1fr;gap:28px;align-items:center;padding:34px 0 56px}
+.hero h1{font-size:clamp(2.3rem,6vw,3.9rem);color:var(--brown);text-shadow:3px 3px 0 var(--gold);max-width:12ch}
+.cta{display:flex;flex-wrap:wrap;gap:14px;margin-top:22px}
+.oven{width:100%;max-width:440px;justify-self:center;animation:float 5s ease-in-out infinite}
+.card{position:relative;overflow:hidden;background:var(--panel);border:2.5px solid var(--ink);border-radius:16px;padding:30px 20px 20px;box-shadow:6px 6px 0 var(--ink)}
+.card::before{content:"";position:absolute;left:0;right:0;top:0;height:9px;background:repeating-linear-gradient(90deg,var(--brown) 0 18px,var(--caramel) 18px 36px,var(--gold) 36px 54px)}
+.view{display:none;padding-bottom:50px}.view.on{display:block}
+.chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:12px}
+.chip{border:2.5px solid var(--ink);background:var(--panel);border-radius:14px;padding:18px 10px;font-weight:800;font-size:1.25rem;text-align:center}
+.chip.on{background:var(--brown);color:var(--panel);box-shadow:3px 3px 0 var(--gold)}
+.step{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.12rem;margin:20px 0 8px;color:var(--brown)}
+.step i{font-style:normal;font-family:Bevan,serif;width:34px;height:34px;flex:none;border-radius:50%;background:var(--brown);color:var(--panel);display:grid;place-items:center}
+.cam{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.shoot{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;font-size:1.3rem;padding:20px}.shoot svg{width:30px;height:30px}
+.preview{width:100%;border-radius:12px;border:2.5px solid var(--ink);display:block}
+.empty{border:2.5px dashed var(--line);border-radius:12px;padding:40px 16px;text-align:center;color:var(--soft)}
+label{font-weight:800;display:block;margin:12px 0 4px}
+input[type=text],input[type=password],input[type=number],input[type=email]{width:100%;padding:12px;border:2.5px solid var(--ink);border-radius:10px;background:var(--panel)}
+#kg{font-family:Bevan,serif;font-size:1.9rem;text-align:center}#save{font-size:1.2rem;padding:16px 26px}
+.big{font-family:Bevan,serif;font-size:1.6rem}.note{font-size:.92rem;color:var(--soft)}
+.msg{margin-top:12px;font-weight:800;font-size:1.1rem}.msg.err{color:var(--rust)}.msg.ok{color:var(--ok)}
+.login{max-width:420px;margin:0 auto}
+.tabs{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+.day{margin-bottom:34px}.day h2{font-size:1.4rem;color:var(--brown);margin-bottom:12px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+.stat{background:var(--panel);border:2.5px solid var(--ink);border-radius:14px;padding:14px}
+.stat b{display:block;font-family:Bevan,serif;font-size:1.9rem;color:var(--brown);font-weight:400}.stat span{font-size:.9rem;color:var(--soft)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.ph{background:var(--panel);border:2.5px solid var(--ink);border-radius:12px;overflow:hidden}
+.ph img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:var(--line)}
+.ph div{padding:10px}.ph .row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;padding:0}
+footer{text-align:center;padding:20px;color:var(--soft);font-size:.9rem}
+.glow{animation:glow 2.6s ease-in-out infinite}
+.steam{animation:steam 3s ease-out infinite;opacity:0}.s2{animation-delay:1s}.s3{animation-delay:2s}
+.tray{animation:tray 6s ease-in-out infinite}
+.knob{transform-origin:center;transform-box:fill-box;animation:spin 9s linear infinite}
+@keyframes glow{50%{opacity:.55}}@keyframes float{50%{transform:translateY(-6px)}}
+@keyframes steam{0%{transform:translateY(0);opacity:0}30%{opacity:.8}100%{transform:translateY(-34px);opacity:0}}
+@keyframes tray{50%{transform:translateX(10px)}}@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.glow,.steam,.tray,.knob,.oven{animation:none}.steam{opacity:.5}}
+@media (max-width:760px){.hero,.cam{grid-template-columns:1fr}.hero .oven{order:-1;max-width:320px}.stat b{font-size:1.4rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><button class="logo" onclick="go('home')" aria-label="Beranda Oven NT3">Oven NT3</button><div class="who" id="who"></div></header>
+
+<section class="view on" id="v-home">
+ <div class="hero">
+  <div>
+   <h1>Selamat Datang di Timbangan Oven NT3</h1>
+   <div class="cta"><button class="btn" onclick="go('op')">Operator</button><button class="btn alt" onclick="go('login')">Masuk tim NT3</button></div>
+  </div>
+  <svg class="oven" viewBox="0 0 400 330" role="img" aria-label="Animasi oven dengan nampan gula kelapa">
+   <defs><linearGradient id="gl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD27A"/><stop offset="1" stop-color="#C8631E"/></linearGradient></defs>
+   <circle cx="200" cy="165" r="150" fill="#E2B26A" opacity=".4"/><circle cx="200" cy="165" r="158" fill="none" stroke="#6B3E1F" stroke-width="3" stroke-dasharray="4 10" opacity=".55"/>
+   <rect x="30" y="40" width="340" height="250" rx="26" fill="#B5762F" stroke="#3B2314" stroke-width="6"/>
+   <rect x="30" y="40" width="340" height="62" rx="26" fill="#6B3E1F" stroke="#3B2314" stroke-width="6"/>
+   <rect x="46" y="56" width="308" height="8" rx="4" fill="#E2B26A" opacity=".5"/>
+   <g stroke="#3B2314" stroke-width="5"><circle cx="90" cy="80" r="15" fill="#F6E7C8"/><circle cx="140" cy="80" r="15" fill="#F6E7C8"/><circle cx="310" cy="80" r="15" fill="#F6E7C8"/></g>
+   <g class="knob"><rect x="87" y="68" width="6" height="14" fill="#3B2314"/></g>
+   <rect x="137" y="68" width="6" height="14" fill="#3B2314" transform="rotate(50 140 80)"/>
+   <rect x="52" y="122" width="296" height="146" rx="14" fill="#3B2314"/>
+   <rect x="66" y="136" width="268" height="118" rx="8" fill="url(#gl)" class="glow"/>
+   <g class="tray"><rect x="84" y="224" width="232" height="12" rx="3" fill="#3B2314"/>
+    <g fill="#8a4a1c" stroke="#3B2314" stroke-width="3"><rect x="100" y="196" width="44" height="28" rx="6"/><rect x="156" y="196" width="44" height="28" rx="6"/><rect x="212" y="196" width="44" height="28" rx="6"/><rect x="268" y="196" width="36" height="28" rx="6"/></g></g>
+   <rect x="66" y="136" width="268" height="118" rx="8" fill="none" stroke="#F6E7C8" stroke-width="4" opacity=".55"/>
+   <path d="M80 148 L120 148 L100 190Z" fill="#fff" opacity=".18"/>
+   <g fill="none" stroke="#F6E7C8" stroke-width="6" stroke-linecap="round"><path class="steam" d="M140 36c-10-10 10-14 0-26"/><path class="steam s2" d="M200 36c-10-10 10-14 0-26"/><path class="steam s3" d="M260 36c-10-10 10-14 0-26"/></g>
+   <rect x="120" y="282" width="30" height="26" rx="5" fill="#3B2314"/><rect x="250" y="282" width="30" height="26" rx="5" fill="#3B2314"/>
+  </svg>
+ </div>
+</section>
+
+<section class="view" id="v-login"><div class="card login">
+ <h2>Masuk tim NT3</h2><p class="note">Untuk Irene, Daiva, dan Rayyan. Operator tidak perlu masuk.</p>
+ <label for="le">Email</label><input type="email" id="le" autocomplete="username">
+ <label for="lp">Kata sandi</label><input type="password" id="lp" autocomplete="current-password">
+ <div class="cta"><button class="btn" id="lgo">Masuk</button></div><div class="msg err" id="lmsg" role="alert"></div>
+</div></section>
+
+<section class="view" id="v-oplogin"><div class="card login">
+ <h2>Masuk operator</h2><p class="note">Tulis nama Anda. Nama akan tertera di setiap foto. Tanpa kata sandi.</p>
+ <label for="on">Nama</label><input type="text" id="on" autocomplete="off" maxlength="30">
+ <div class="cta"><button class="btn" id="ogo">Mulai</button></div><div class="msg err" id="omsg2" role="alert"></div>
+</div></section>
+
+<section class="view" id="v-op"><div class="card">
+ <h2>Foto hasil timbangan</h2>
+ <div class="step"><i>1</i>Pilih kategori</div>
+ <div class="chips" id="cats" role="radiogroup" aria-label="Kategori foto"></div>
+ <div class="cam"><div>
+  <div class="step"><i>2</i>Foto layar timbangan</div>
+  <input type="file" id="file" accept="image/*" capture="environment" hidden>
+  <button class="btn shoot" id="shoot" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Ambil foto</button>
+  <p class="note" id="hint">Pilih kategori dulu.</p>
+  <div id="form" hidden>
+   <div class="big" id="stamp"></div>
+   <div class="step"><i>3</i>Cek angka, lalu simpan</div>
+   <label for="kg">Angka timbangan (kg)</label><input type="number" id="kg" step="any" inputmode="decimal">
+   <div class="note" id="aistat"></div>
+   <div class="cta"><button class="btn" id="save">Simpan foto</button><button class="btn alt" id="retry">Ulangi</button></div>
+  </div>
+  <div class="msg" id="omsg" role="status"></div>
+ </div>
+ <div><canvas class="preview" id="pv" hidden></canvas><div class="empty" id="pvE">Foto akan tampil di sini</div></div></div>
+</div></section>
+
+<section class="view" id="v-dash">
+ <div class="tabs"><h2>Monitoring oven</h2><div class="who"><span class="note" id="cnt"></span><button class="btn alt sm" id="ref">Muat ulang</button><button class="btn sm" id="csv">Unduh semua data (CSV)</button></div></div>
+ <div id="days"></div>
+</section>
+<footer>Oven NT3</footer>
+</div>
+
+<script>
+/* ====== ISI DUA BARIS INI ====== */
+const SB_URL='https://klezbplcjzuflrugzeyy.supabase.co';
+const SB_KEY='sb_publishable_CLHimPufJreCxlMrJIEDeA_aqPLi6hT';
+/* =============================== */
+const sb=supabase.createClient(SB_URL,SB_KEY);
+const CATS=['AB','TO','GK AO','BK AO','GJ'],$=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[<>&"']/g,'');
+let user=null,opn=null,cat=null,pend=null,rows=[],timer=null;
+try{opn=sessionStorage.getItem('nt3op')}catch(e){}
+const done=new Set();
+
+function go(v){
+ if(v==='dash'&&!user)v='login';
+ if(v==='op'&&!opn)v='oplogin';
+ document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
+ clearInterval(timer);if(v==='dash'){load();timer=setInterval(load,30000)}
+ hdr();scrollTo(0,0);
+}
+function hdr(){
+ const nm=user?esc(user.email.split('@')[0]):'';
+ $('who').innerHTML=user?`<span>Halo, ${nm}</span><button class="btn sm" onclick="go('dash')">Monitoring</button><button class="btn alt sm" id="out">Keluar</button>`
+  :opn?`<span>Operator: ${opn}</span><button class="btn alt sm" id="out">Keluar</button>`:'';
+ if($('out'))$('out').onclick=async()=>{if(user)await sb.auth.signOut();user=null;opn=null;try{sessionStorage.removeItem('nt3op')}catch(e){}rows=[];reset();go('home')};
+}
+sb.auth.getSession().then(({data})=>{user=data.session?.user||null;hdr()});
+sb.auth.onAuthStateChange((_,s)=>{user=s?.user||null;hdr()});
+
+$('lgo').onclick=async()=>{
+ $('lmsg').textContent='Memeriksa…';
+ const {error}=await sb.auth.signInWithPassword({email:$('le').value.trim(),password:$('lp').value});
+ if(error){$('lmsg').textContent='Email atau kata sandi salah.';return}
+ $('lmsg').textContent='';$('lp').value='';go('dash');
+};
+$('lp').onkeydown=e=>{if(e.key==='Enter')$('lgo').click()};
+$('ogo').onclick=()=>{
+ const n=$('on').value.replace(/[<>&"'`]/g,'').trim();
+ if(!n){$('omsg2').textContent='Isi nama dulu.';return}
+ opn=n;try{sessionStorage.setItem('nt3op',n)}catch(e){}
+ $('omsg2').textContent='';go('op');
+};
+$('on').onkeydown=e=>{if(e.key==='Enter')$('ogo').click()};
+
+CATS.forEach(c=>{const b=document.createElement('button');b.className='chip';b.textContent=c;b.setAttribute('role','radio');b.setAttribute('aria-checked','false');
+ b.onclick=()=>{cat=c;[...$('cats').children].forEach(x=>{const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-checked',on)});$('shoot').disabled=false;$('hint').textContent='Kategori '+c+'. Siap memotret.'};
+ $('cats').appendChild(b)});
+function mark(){[...$('cats').children].forEach((x,i)=>{x.classList.remove('on');x.setAttribute('aria-checked','false');x.textContent=CATS[i]+(done.has(CATS[i])?' ✓':'')})}
+$('shoot').onclick=()=>$('file').click();
+$('retry').onclick=reset;
+function reset(){pend=null;$('form').hidden=true;$('pv').hidden=true;$('pvE').hidden=false;$('omsg').textContent=''}
+
+$('file').onchange=async e=>{
+ const f=e.target.files[0];e.target.value='';if(!f)return;
+ const ts=Date.now(),bmp=await createImageBitmap(f);
+ const W=Math.min(800,bmp.width),H=Math.round(bmp.height*W/bmp.width),c=$('pv');
+ c.width=W;c.height=H;const x=c.getContext('2d');x.drawImage(bmp,0,0,W,H);
+ const b64=c.toDataURL('image/jpeg',.8).split(',')[1];
+ const dt=new Date(ts),tx=opn+'  |  '+dt.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})+'  |  '+dt.toLocaleTimeString('id-ID',{hour12:false}).replace(/\./g,':')+'  |  '+cat;
+ const bh=Math.max(34,W/16);let fs=bh*.55;x.font='700 '+fs+'px Nunito,sans-serif';
+ while(x.measureText(tx).width>W-34&&fs>10){fs-=1;x.font='700 '+fs+'px Nunito,sans-serif'}
+ x.fillStyle='rgba(30,15,5,.88)';x.fillRect(0,H-bh,W,bh);x.fillStyle='#FFD27A';x.textBaseline='middle';x.fillText(tx,18,H-bh/2);
+ const lw=Math.max(6,W/90);x.lineWidth=lw;x.strokeStyle='#E2B26A';x.strokeRect(lw/2,lw/2,W-lw,H-lw);
+ const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.7));
+ pend={cat,ts,by:opn,blob};
+ c.hidden=false;$('pvE').hidden=true;$('form').hidden=false;$('stamp').textContent=dt.toLocaleString('id-ID',{hour12:false}).replace(/\./g,':');$('kg').value='';$('omsg').textContent='';
+ detect(b64);
+};
+async function detect(b64){
+ const s=$('aistat');s.textContent='Membaca angka timbangan…';
+ try{
+  const {data,error}=await sb.functions.invoke('super-processor',{body:{image:b64}});
+  if(error)throw error;
+  if(data&&typeof data.value==='number'&&pend){$('kg').value=data.value;pend.ai=data.value;s.textContent='Terbaca otomatis. Periksa dan ubah bila salah.'}
+  else s.textContent='Angka tidak terbaca. Isi manual di kolom atas.';
+ }catch(e){s.textContent='Deteksi otomatis tidak tersedia. Isi angka secara manual.'}
+}
+$('save').onclick=async()=>{
+ const v=parseFloat($('kg').value),m=$('omsg');m.className='msg';
+ if(!pend)return;if(isNaN(v)){m.className='msg err';m.textContent='Isi angka timbangan dulu.';return}
+ $('save').disabled=true;m.textContent='Menyimpan…';
+ try{
+  const d=new Date(pend.ts),path=d.getFullYear()+'/'+(d.getMonth()+1)+'/'+pend.ts+'-'+Math.random().toString(36).slice(2,8)+'.jpg';
+  const up=await sb.storage.from('foto').upload(path,pend.blob,{contentType:'image/jpeg'});
+  if(up.error)throw up.error;
+  const ins=await sb.from('timbang').insert({cat:pend.cat,kg:v,ts:new Date(pend.ts).toISOString(),operator:pend.by,edited:pend.ai!==v,photo_path:path});
+  if(ins.error)throw ins.error;
+  done.add(pend.cat);const sv=pend.cat+' '+v;cat=null;mark();$('shoot').disabled=true;$('hint').textContent='Pilih kategori berikutnya.';
+  reset();m.className='msg ok';m.textContent='Tersimpan ✓ '+sv+' kg';
+ }catch(e){m.className='msg err';m.textContent='Gagal menyimpan. Periksa sinyal lalu coba lagi.'}
+ $('save').disabled=false;
+};
+
+/* ===== Dasbor tim ===== */
+const dk=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const fmt=t=>new Date(t).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).replace(/\./g,':');
+const p=(a,b)=>(a==null||!b)?'–':(a/b*100).toFixed(2)+'%';
+async function load(){
+ if(!user)return;
+ const {data,error}=await sb.from('timbang').select('*').order('ts',{ascending:false}).limit(500);
+ if(error){$('days').innerHTML='<div class="empty">Data tidak bisa dimuat. Coba muat ulang atau masuk lagi.</div>';return}
+ rows=data||[];
+ if(rows.length){
+  const {data:u}=await sb.storage.from('foto').createSignedUrls(rows.map(r=>r.photo_path),3600);
+  const m={};(u||[]).forEach(x=>{if(x.signedUrl)m[x.path]=x.signedUrl});rows.forEach(r=>r.url=m[r.photo_path]);
+ }
+ draw();
+}
+function draw(){
+ $('cnt').textContent=rows.length+' foto';
+ if(!rows.length){$('days').innerHTML='<div class="empty">Belum ada foto dari operator.</div>';return}
+ const g={};rows.forEach(r=>(g[dk(r.ts)]??=[]).push(r));
+ $('days').innerHTML=Object.keys(g).sort().reverse().map(k=>{
+  const L=g[k],last=c=>{const r=L.find(r=>r.cat===c);return r?Number(r.kg):null};
+  const AB=last('AB'),TO=last('TO'),GK=last('GK AO'),BK=last('BK AO');
+  const sus=(AB&&TO!=null)?p(AB-TO,AB):'–';
+  return `<div class="day"><h2>${new Date(L[0].ts).toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</h2>
+  <div class="stats"><div class="stat"><b>${sus}</b><span>Susut oven</span></div><div class="stat"><b>${p(GK,TO)}</b><span>%GK</span></div><div class="stat"><b>${p(BK,TO)}</b><span>%BK</span></div></div>
+  <div class="grid">${L.map(r=>`<div class="ph"><img src="${r.url||''}" alt="Foto ${esc(r.cat)}" loading="lazy"><div><b>${esc(r.cat)}: ${Number(r.kg)} kg</b>${r.edited?' <span class="note">(diedit)</span>':''}<div class="note">${fmt(r.ts)}<br>Oleh ${esc(r.operator)}</div>
+  <div class="row"><button class="btn sm" data-dl="${r.id}">Unduh</button><button class="btn danger sm" data-del="${r.id}">Hapus</button></div></div></div>`).join('')}</div></div>`}).join('');
+}
+function save(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+$('days').onclick=async e=>{
+ const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.del){
+  if(!b.dataset.arm){b.dataset.arm=1;b.textContent='Yakin hapus?';setTimeout(()=>{b.dataset.arm='';b.textContent='Hapus'},3000);return}
+  const r=rows.find(x=>x.id===b.dataset.del);if(!r)return;b.textContent='Menghapus…';
+  const a=await sb.storage.from('foto').remove([r.photo_path]);
+  const d=await sb.from('timbang').delete().eq('id',r.id);
+  if(a.error||d.error){b.textContent='Gagal';return}
+  load();
+ }
+ if(b.dataset.dl){
+  const r=rows.find(x=>x.id===b.dataset.dl);if(!r||!r.url){b.textContent='Tidak tersedia';return}
+  try{const bl=await (await fetch(r.url)).blob();const d=new Date(r.ts);
+   save(bl,'NT3_'+r.cat.replace(' ','')+'_'+dk(r.ts)+'_'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0')+'.jpg')}catch(x){b.textContent='Gagal'}
+ }
+};
+$('ref').onclick=load;
+$('csv').onclick=()=>{
+ const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+ const lines=[['Tanggal','Jam','Operator','Kategori','Kg','Diedit','File'].join(',')];
+ rows.forEach(r=>{const d=new Date(r.ts);lines.push([dk(r.ts),d.toLocaleTimeString('id-ID',{hour12:false}).replace(/\./g,':'),r.operator,r.cat,r.kg,r.edited?'ya':'tidak',r.photo_path].map(q).join(','))});
+ save(new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv'}),'data-oven-nt3-'+dk(Date.now())+'.csv');
+};
+hdr();
+</script>
+</body>
+</html>
