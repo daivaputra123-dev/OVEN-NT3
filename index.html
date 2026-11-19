@@ -163,7 +163,7 @@ input[type=date],select{width:100%;padding:12px;border:2.5px solid var(--ink);bo
   <div id="form" hidden>
    <div class="big" id="stamp"></div>
    <div class="step"><i>3</i>Cek angka dan wadah, lalu simpan</div>
-   <label for="kg">Angka di layar timbangan (kg)</label><input type="number" id="kg" step="any" inputmode="decimal">
+   <label for="kg">Angka di layar timbangan (kg)</label><input type="text" id="kg" inputmode="decimal" autocomplete="off" placeholder="contoh: 12,68">
    <div class="note" id="aistat"></div>
    <label id="wl">Jenis wadah (otomatis dikurangi)</label>
    <div class="wd" id="wd" role="radiogroup" aria-labelledby="wl"></div>
@@ -197,6 +197,8 @@ const {url:SB_URL,key:SB_KEY,fn:FN}=window.NT3||{};
 if(!SB_URL||!SB_KEY)document.body.insertAdjacentHTML('afterbegin','<p style="padding:12px;margin:0;background:#A8431F;color:#fff;font-weight:800">File config.js belum ada atau belum diisi.</p>');
 const sb=supabase.createClient(SB_URL||'https://example.supabase.co',SB_KEY||'kosong');
 const CATS=['AB','TO','GK AO','BK AO','GJ'],$=id=>document.getElementById(id);
+const nf=x=>String(Math.round(Number(x)*100)/100).replace('.',',');
+const num=s=>{s=String(s).trim().replace(/\s/g,'');return /^-?(\d+([.,]\d*)?|[.,]\d+)$/.test(s)?parseFloat(s.replace(',','.')):NaN};
 const esc=s=>String(s??'').replace(/[<>&"']/g,'');
 let user=null,opn=null,cat=null,pend=null,rows=[],timer=null,wad=null,recap={},kgm={},base=null,hasil=null,selAt=null,curDay=null,cm=new Date(new Date().getFullYear(),new Date().getMonth(),1),sel=null,mrows=[],fin={},rrows=[];
 try{opn=sessionStorage.getItem('nt3op')}catch(e){}
@@ -241,7 +243,7 @@ CATS.forEach(c=>{const b=document.createElement('button');b.className='chip';b.s
  $('cats').appendChild(b)});
 function paint(){
  [...$('cats').children].forEach(x=>{const c=x.dataset.c,n=recap[c]||0,on=c===cat;
-  x.classList.toggle('on',on);x.setAttribute('aria-checked',on);x.innerHTML=c+'<small>'+(n?(kgm[c]!=null?kgm[c]+' kg ✓':'✓')+(n>1?' · '+n+' foto':''):(c==='GJ'?'opsional':'belum'))+'</small>'});
+  x.classList.toggle('on',on);x.setAttribute('aria-checked',on);x.innerHTML=c+'<small>'+(n?(kgm[c]!=null?nf(kgm[c])+' kg ✓':'✓')+(n>1?' · '+n+' foto':''):(c==='GJ'?'opsional':'belum'))+'</small>'});
  const got=WAJIB.filter(c=>recap[c]),miss=WAJIB.filter(c=>!recap[c]);
  $('recap').innerHTML='<b>Hari ini, '+esc(opn)+': '+got.length+' dari '+WAJIB.length+' kategori wajib</b>'+(recap['GJ']?' <span class="note">(+ GJ '+recap['GJ']+' foto)</span>':'')+'<div class="bar"><i style="width:'+(got.length/WAJIB.length*100)+'%"></i></div>'+
   (miss.length?'<span class="miss">Belum: '+miss.join(', ')+'</span>':'<span class="okc">Semua kategori wajib sudah terkumpul ✓</span>');
@@ -258,16 +260,16 @@ async function recapLoad(){
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&opn&&$('v-op').classList.contains('on'))recapLoad()});
 WADAH.forEach(([n,tr])=>{const b=document.createElement('button');b.className='chip';b.setAttribute('role','radio');b.setAttribute('aria-checked','false');
- b.innerHTML=n+(tr?'<small>− '+tr+' kg</small>':'');
+ b.innerHTML=n+(tr?'<small>− '+nf(tr)+' kg</small>':'');
  b.onclick=()=>{wad=[n,tr];[...$('wd').children].forEach(x=>{x.classList.toggle('on',x===b);x.setAttribute('aria-checked',x===b)});calc()};
  $('wd').appendChild(b)});
 function clearWad(){wad=null;$('jml').value=1;[...$('wd').children].forEach(x=>{x.classList.remove('on');x.setAttribute('aria-checked','false')})}
 function calc0(){
- const raw=parseFloat($('kg').value);
+ const raw=num($('kg').value);
  if(!wad||isNaN(raw)){$('net').textContent='–';$('netf').textContent=wad?'Isi angka timbangan':'Pilih jenis wadah';return null}
  const n=Math.max(1,parseInt($('jml').value)||1),tr=Math.round(wad[1]*n*100)/100,br=Math.abs(raw),net=Math.round((br-tr)*100)/100;
- if(net<0){$('net').textContent='–';$('netf').innerHTML='<span class="warn">Angka lebih kecil dari berat wadah ('+tr+' kg). Cek angka atau jenis wadah.</span>';return null}
- $('net').textContent=net+' kg';$('netf').textContent=br+' − '+(n>1?n+' × '+wad[1]+' ('+tr+')':wad[1])+' = berat bersih';return {br,net,n,tr};
+ if(net<0){$('net').textContent='–';$('netf').innerHTML='<span class="warn">Angka lebih kecil dari berat wadah ('+nf(tr)+' kg). Cek angka atau jenis wadah.</span>';return null}
+ $('net').textContent=nf(net)+' kg';$('netf').textContent=nf(br)+' − '+(n>1?n+' × '+nf(wad[1])+' ('+nf(tr)+')':nf(wad[1]))+' = berat bersih';return {br,net,n,tr};
 }
 function calc(){hasil=calc0();render();return hasil}
 function render(){
@@ -275,7 +277,7 @@ function render(){
  const c=$('pv'),W=base.width,H=base.height,x=c.getContext('2d');
  c.width=W;c.height=H;x.drawImage(base,0,0);
  const dt=new Date(pend.ts),L=[pend.by+'  |  '+dt.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})+'  |  '+dt.toLocaleTimeString('id-ID',{hour12:false}).replace(/\./g,':')+'  |  '+pend.cat+(pend.gal?'  |  galeri':'')];
- if(hasil&&wad)L.push('Bersih: '+hasil.net+' kg  ('+hasil.br+' − '+(hasil.n>1?hasil.n+' × ':'')+wad[0]+' '+wad[1]+')');
+ if(hasil&&wad)L.push('Bersih: '+nf(hasil.net)+' kg  ('+nf(hasil.br)+' − '+(hasil.n>1?hasil.n+' × ':'')+wad[0]+' '+nf(wad[1])+')');
  const lh=Math.max(32,W/17);let fs=lh*.58;x.font='700 '+fs+'px Nunito,sans-serif';
  while(L.some(l=>x.measureText(l).width>W-34)&&fs>10){fs-=1;x.font='700 '+fs+'px Nunito,sans-serif'}
  const bh=lh*L.length+8;x.fillStyle='rgba(30,15,5,.88)';x.fillRect(0,H-bh,W,bh);x.textBaseline='middle';
@@ -306,7 +308,7 @@ async function detect(b64){
  try{
   const {data,error}=await sb.functions.invoke(FN||'super-processor',{body:{image:b64}});
   if(error)throw error;
-  if(data&&typeof data.value==='number'&&pend){$('kg').value=Math.abs(data.value);pend.ai=Math.abs(data.value);calc();s.textContent='Terbaca otomatis. Periksa dan ubah bila salah.'}
+  if(data&&typeof data.value==='number'&&pend){$('kg').value=nf(Math.abs(data.value));pend.ai=Math.abs(data.value);calc();s.textContent='Terbaca otomatis. Periksa dan ubah bila salah.'}
   else s.textContent='Angka tidak terbaca. Isi manual di kolom atas.';
  }catch(e){s.textContent='Deteksi otomatis tidak tersedia. Isi angka secara manual.'}
 }
@@ -322,7 +324,7 @@ $('save').onclick=async()=>{
   if(up.error)throw up.error;
   const ins=await sb.from('timbang').insert({cat:pend.cat,kg:h.net,bruto:h.br,wadah:wad[0],jumlah_wadah:h.n,ts:new Date(pend.ts).toISOString(),operator:pend.by,edited:pend.ai!==h.br,photo_path:path});
   if(ins.error)throw ins.error;
-  const sv=pend.cat+' '+h.net;recap[pend.cat]=(recap[pend.cat]||0)+1;kgm[pend.cat]=Math.round(((kgm[pend.cat]||0)+h.net)*100)/100;cat=null;paint();$('shoot').disabled=$('galbtn').disabled=true;$('hint').textContent='Pilih kategori berikutnya.';
+  const sv=pend.cat+' '+nf(h.net);recap[pend.cat]=(recap[pend.cat]||0)+1;kgm[pend.cat]=Math.round(((kgm[pend.cat]||0)+h.net)*100)/100;cat=null;paint();$('shoot').disabled=$('galbtn').disabled=true;$('hint').textContent='Pilih kategori berikutnya.';
   reset();m.className='msg ok';m.textContent='Tersimpan ✓ '+sv+' kg';recapLoad();
  }catch(e){m.className='msg err';m.textContent='Gagal menyimpan: '+(e.message||JSON.stringify(e))}
  $('save').disabled=false;
@@ -341,8 +343,8 @@ async function loadRiw(){
 }
 function drawRiw(d){
  const hari=d===dk(Date.now()),S=c=>rrows.filter(r=>r.cat===c),miss=WAJIB.filter(c=>!S(c).length);
- const tot=CATS.map(c=>{const a=S(c);return `<div class="stat"><b>${a.length?r2(a.reduce((s,r)=>s+Number(r.kg),0)):'–'}</b><span>${c} · ${a.length} timbang</span></div>`}).join('');
- $('rl').innerHTML=`<div class="stats" style="margin-top:12px">${tot}</div>`+(rrows.length?rrows.map(r=>`<div class="ent"><div><b>${esc(r.cat)}: ${Number(r.kg)} kg</b><div class="note">${hm(r.ts)}${r.wadah?' · '+Number(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah):''}</div></div><button class="btn sm" data-ed="${r.id}">Koreksi</button></div><div id="ef-${r.id}"></div>`).join(''):'<div class="empty">Belum ada timbangan di tanggal ini.</div>');
+ const tot=CATS.map(c=>{const a=S(c);return `<div class="stat"><b>${a.length?nf(a.reduce((s,r)=>s+Number(r.kg),0)):'–'}</b><span>${c} · ${a.length} timbang</span></div>`}).join('');
+ $('rl').innerHTML=`<div class="stats" style="margin-top:12px">${tot}</div>`+(rrows.length?rrows.map(r=>`<div class="ent"><div><b>${esc(r.cat)}: ${nf(r.kg)} kg</b><div class="note">${hm(r.ts)}${r.wadah?' · '+nf(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah):''}</div></div><button class="btn sm" data-ed="${r.id}">Koreksi</button></div><div id="ef-${r.id}"></div>`).join(''):'<div class="empty">Belum ada timbangan di tanggal ini.</div>');
  $('fin2').hidden=!hari;$('fin2').disabled=!!miss.length;
  $('rmsg').className='msg';$('rmsg').textContent=hari&&miss.length?'Belum bisa selesai. Kurang: '+miss.join(', '):'';
 }
@@ -352,16 +354,16 @@ $('rl').onclick=e=>{
  document.querySelectorAll('[id^="ef-"]').forEach(x=>x.innerHTML='');
  if(open)return;
  box.innerHTML=`<div class="edf"><label>Kategori</label><select id="ec">${CATS.map(c=>`<option${c===r.cat?' selected':''}>${c}</option>`).join('')}</select>
- <label>Angka di layar timbangan (kg)</label><input type="number" id="eb" step="any" inputmode="decimal" value="${Number(r.bruto??r.kg)}">
+ <label>Angka di layar timbangan (kg)</label><input type="text" id="eb" inputmode="decimal" autocomplete="off" value="${nf(r.bruto??r.kg)}">
  <label>Jenis wadah</label><select id="ew"><option value="">Pilih wadah</option>${WADAH.map(([n])=>`<option${n===r.wadah?' selected':''}>${n}</option>`).join('')}</select>
  <label>Jumlah wadah</label><input type="number" id="en" min="1" max="30" value="${r.jumlah_wadah||1}">
  <div class="net"><span class="note" id="efx"></span><b id="efn">–</b></div>
  <div class="cta"><button class="btn sm" id="esv">Simpan koreksi</button><button class="btn alt sm" id="ecx">Batal</button></div><div class="msg" id="emsg"></div></div>`;
- const calcE=()=>{const br=Math.abs(parseFloat($('eb').value)),n=Math.max(1,parseInt($('en').value)||1),t=TARE[$('ew').value];
+ const calcE=()=>{const br=Math.abs(num($('eb').value)),n=Math.max(1,parseInt($('en').value)||1),t=TARE[$('ew').value];
   if(isNaN(br)||t==null){$('efn').textContent='–';$('efx').textContent='Isi angka dan pilih wadah';return null}
   const tr=Math.round(t*n*100)/100,net=Math.round((br-tr)*100)/100;
-  if(net<0){$('efn').textContent='–';$('efx').textContent='Angka lebih kecil dari berat wadah ('+tr+' kg)';return null}
-  $('efn').textContent=net+' kg';$('efx').textContent=br+' − '+tr+' = berat bersih';return {br,n,net}};
+  if(net<0){$('efn').textContent='–';$('efx').textContent='Angka lebih kecil dari berat wadah ('+nf(tr)+' kg)';return null}
+  $('efn').textContent=nf(net)+' kg';$('efx').textContent=nf(br)+' − '+nf(tr)+' = berat bersih';return {br,n,net}};
  ['eb','ew','en'].forEach(i=>$(i).oninput=calcE);$('ew').onchange=calcE;calcE();
  $('ecx').onclick=()=>box.innerHTML='';
  $('esv').onclick=async()=>{const h=calcE(),m=$('emsg');m.className='msg err';
@@ -381,7 +383,7 @@ const dk=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+
 const fmt=t=>new Date(t).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).replace(/\./g,':');
 const hm=t=>new Date(t).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',hour12:false}).replace(/\./g,':');
 const r2=x=>Math.round(x*100)/100;
-const p=(a,b)=>(a==null||!b)?'–':Math.abs(a/b*100).toFixed(2)+'%';
+const p=(a,b)=>(a==null||!b)?'–':Math.abs(a/b*100).toFixed(2).replace('.',',')+'%';
 const BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 async function fetchRange(a,b,cols){
  let all=[],from=0;
@@ -413,7 +415,7 @@ function drawCal(){
  for(let i=1;i<=nd;i++){const d=y+'-'+String(m+1).padStart(2,'0')+'-'+String(i).padStart(2,'0'),n=cnt[d]||0;
   cells+=`<button class="dc${n?' has':''}${d===today?' tdy':''}" data-d="${d}"${n?'':' disabled'} aria-label="${i} ${BULAN[m]}, ${n} foto"><span>${i}</span><small>${n?n+' foto'+(ds[d]?' ✓':''):''}</small></button>`}
  const byD={};mrows.forEach(r=>(byD[dk(r.ts)]??=[]).push(r));
- const f=v=>v==null?'–':r2(v);
+ const f=v=>v==null?'–':nf(v);
  const rowsHtml=Object.keys(byD).sort().reverse().map(d=>{const L=byD[d],s=c=>{const a=L.filter(r=>r.cat===c);return a.length?a.reduce((x,r)=>x+Math.abs(Number(r.kg)),0):null},ab=s('AB'),to=s('TO'),gk=s('GK AO'),bk=s('BK AO');
   return `<tr data-d="${d}"><td>${Number(d.slice(8))} ${BULAN[m].slice(0,3)}</td><td>${f(ab)}</td><td>${f(to)}</td><td>${f(gk)}</td><td>${f(bk)}</td><td>${f(s('GJ'))}</td><td>${ab&&to!=null?p(ab-to,ab):'–'}</td><td>${p(gk,to)}</td><td>${p(bk,to)}</td></tr>`}).join('');
  $('cal').innerHTML=`<div class="nav"><button class="btn alt sm" id="pm" aria-label="Bulan sebelumnya">‹</button><h2>${BULAN[m]} ${y}</h2><button class="btn alt sm" id="nm" aria-label="Bulan berikutnya">›</button></div>
@@ -435,7 +437,7 @@ async function loadDay(){
 }
 function boxes(L){
  return '<div class="cats5">'+CATS.map(c=>{const a=L.filter(r=>r.cat===c),s=a.reduce((x,r)=>x+Math.abs(Number(r.kg)),0);
-  return `<div class="cb"><span>${c}${c==='GJ'?' (opsional)':''}</span><b>${a.length?r2(s):'–'}</b><small>${a.length?'kg · '+a.length+' timbang':'belum ada'}</small></div>`}).join('')+'</div>';
+  return `<div class="cb"><span>${c}${c==='GJ'?' (opsional)':''}</span><b>${a.length?nf(s):'–'}</b><small>${a.length?'kg · '+a.length+' timbang':'belum ada'}</small></div>`}).join('')+'</div>';
 }
 function hasilHari(L){
  const sum=c=>{const a=L.filter(r=>r.cat===c);return a.length?a.reduce((s,r)=>s+Math.abs(Number(r.kg)),0):null};
@@ -444,7 +446,7 @@ function hasilHari(L){
  <p>${miss.length?'<span class="miss">Kurang: '+miss.join(', ')+'</span>':'<span class="okc">Semua kategori wajib lengkap ✓</span>'}</p>`;
 }
 function card(r){
- return `<div class="ph"><img src="${r.url||''}" alt="Foto ${esc(r.cat)}" loading="lazy"><div><b>${esc(r.cat)}: ${Number(r.kg)} kg</b>${r.edited?' <span class="note">(diedit)</span>':''}${r.wadah?'<div class="note">Bruto '+Number(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah)+'</div>':''}<div class="note">${fmt(r.ts)}<br>Oleh ${esc(r.operator)}</div>
+ return `<div class="ph"><img src="${r.url||''}" alt="Foto ${esc(r.cat)}" loading="lazy"><div><b>${esc(r.cat)}: ${nf(r.kg)} kg</b>${r.edited?' <span class="note">(diedit)</span>':''}${r.wadah?'<div class="note">Bruto '+nf(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah)+'</div>':''}<div class="note">${fmt(r.ts)}<br>Oleh ${esc(r.operator)}</div>
  <div class="row"><button class="btn sm" data-dl="${r.id}">Unduh</button><button class="btn danger sm" data-del="${r.id}">Hapus</button></div></div></div>`;
 }
 function draw(){
