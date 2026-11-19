@@ -165,8 +165,9 @@ if(!SB_URL||!SB_KEY)document.body.insertAdjacentHTML('afterbegin','<p style="pad
 const sb=supabase.createClient(SB_URL||'https://example.supabase.co',SB_KEY||'kosong');
 const CATS=['AB','TO','GK AO','BK AO','GJ'],$=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[<>&"']/g,'');
-let user=null,opn=null,cat=null,pend=null,rows=[],timer=null,wad=null,recap={},mode='op';
+let user=null,opn=null,cat=null,pend=null,rows=[],timer=null,wad=null,recap={},kgm={},mode='op';
 try{opn=sessionStorage.getItem('nt3op')}catch(e){}
+const WAJIB=['AB','TO','GK AO','BK AO'];
 const WADAH=[['Tanpa wadah',0],['Box kuning',2.56],['Box putih tanpa tutup',0.7],['Box putih dengan tutup',0.98],['Plastik koli',0.02]];
 
 function go(v){
@@ -206,16 +207,16 @@ CATS.forEach(c=>{const b=document.createElement('button');b.className='chip';b.s
  $('cats').appendChild(b)});
 function paint(){
  [...$('cats').children].forEach(x=>{const c=x.dataset.c,n=recap[c]||0,on=c===cat;
-  x.classList.toggle('on',on);x.setAttribute('aria-checked',on);x.innerHTML=c+'<small>'+(n?n+' foto ✓':'belum')+'</small>'});
- const got=CATS.filter(c=>recap[c]),miss=CATS.filter(c=>!recap[c]);
- $('recap').innerHTML='<b>Hari ini, '+esc(opn)+': '+got.length+' dari '+CATS.length+' kategori</b><div class="bar"><i style="width:'+(got.length/CATS.length*100)+'%"></i></div>'+
-  (miss.length?'<span class="miss">Belum: '+miss.join(', ')+'</span>':'<span class="okc">Semua kategori sudah terkumpul ✓</span>');
+  x.classList.toggle('on',on);x.setAttribute('aria-checked',on);x.innerHTML=c+'<small>'+(n?(kgm[c]!=null?kgm[c]+' kg ✓':'✓')+(n>1?' · '+n+' foto':''):(c==='GJ'?'opsional':'belum'))+'</small>'});
+ const got=WAJIB.filter(c=>recap[c]),miss=WAJIB.filter(c=>!recap[c]);
+ $('recap').innerHTML='<b>Hari ini, '+esc(opn)+': '+got.length+' dari '+WAJIB.length+' kategori wajib</b>'+(recap['GJ']?' <span class="note">(+ GJ '+recap['GJ']+' foto)</span>':'')+'<div class="bar"><i style="width:'+(got.length/WAJIB.length*100)+'%"></i></div>'+
+  (miss.length?'<span class="miss">Belum: '+miss.join(', ')+'</span>':'<span class="okc">Semua kategori wajib sudah terkumpul ✓</span>');
 }
 async function recapLoad(){
  if(!opn)return;
  const a=new Date();a.setHours(0,0,0,0);
  const {data,error}=await sb.rpc('rekap_operator',{p_nama:opn,p_from:a.toISOString(),p_to:new Date(a.getTime()+864e5).toISOString()});
- if(!error&&data){recap={};data.forEach(r=>recap[r.cat]=Number(r.jumlah))}
+ if(!error&&data){recap={};kgm={};data.forEach(r=>{recap[r.cat]=Number(r.jumlah);kgm[r.cat]=r.kg==null?null:Number(r.kg)})}
  paint();
 }
 WADAH.forEach(([n,tr])=>{const b=document.createElement('button');b.className='chip';b.setAttribute('role','radio');b.setAttribute('aria-checked','false');
@@ -273,7 +274,7 @@ $('save').onclick=async()=>{
   if(up.error)throw up.error;
   const ins=await sb.from('timbang').insert({cat:pend.cat,kg:h.net,bruto:h.br,wadah:wad[0],ts:new Date(pend.ts).toISOString(),operator:pend.by,edited:pend.ai!==h.br,photo_path:path});
   if(ins.error)throw ins.error;
-  const sv=pend.cat+' '+h.net;recap[pend.cat]=(recap[pend.cat]||0)+1;cat=null;paint();$('shoot').disabled=$('galbtn').disabled=true;$('hint').textContent='Pilih kategori berikutnya.';
+  const sv=pend.cat+' '+h.net;recap[pend.cat]=(recap[pend.cat]||0)+1;kgm[pend.cat]=h.net;cat=null;paint();$('shoot').disabled=$('galbtn').disabled=true;$('hint').textContent='Pilih kategori berikutnya.';
   reset();m.className='msg ok';m.textContent='Tersimpan ✓ '+sv+' kg';recapLoad();
  }catch(e){m.className='msg err';m.textContent='Gagal menyimpan: '+(e.message||JSON.stringify(e))}
  $('save').disabled=false;
@@ -297,10 +298,10 @@ async function load(){
 function grp(L){
  const last=c=>{const r=L.find(r=>r.cat===c);return r?Math.abs(Number(r.kg)):null};
  const AB=last('AB'),TO=last('TO'),GK=last('GK AO'),BK=last('BK AO');
- const miss=CATS.filter(c=>!L.some(r=>r.cat===c));
+ const miss=WAJIB.filter(c=>!L.some(r=>r.cat===c));
  const warn=(AB&&TO!=null&&TO>AB)?'<div class="warn">⚠ TO lebih besar dari AB. Cek foto dan angkanya.</div>':'';
  return `<div class="stats"><div class="stat"><b>${(AB&&TO!=null)?p(AB-TO,AB):'–'}</b><span>Susut oven</span></div><div class="stat"><b>${p(GK,TO)}</b><span>%GK</span></div><div class="stat"><b>${p(BK,TO)}</b><span>%BK</span></div></div>${warn}
- <p>${miss.length?'<span class="miss">Kurang: '+miss.join(', ')+'</span>':'<span class="okc">Semua kategori lengkap ✓</span>'}</p>
+ <p>${miss.length?'<span class="miss">Kurang: '+miss.join(', ')+'</span>':'<span class="okc">Semua kategori wajib lengkap ✓</span>'}</p>
  <div class="grid">${L.map(r=>`<div class="ph"><img src="${r.url||''}" alt="Foto ${esc(r.cat)}" loading="lazy"><div><b>${esc(r.cat)}: ${Number(r.kg)} kg</b>${r.edited?' <span class="note">(diedit)</span>':''}${r.wadah?'<div class="note">Bruto '+Number(r.bruto)+' − '+esc(r.wadah)+'</div>':''}<div class="note">${fmt(r.ts)}<br>Oleh ${esc(r.operator)}</div>
  <div class="row"><button class="btn sm" data-dl="${r.id}">Unduh</button><button class="btn danger sm" data-del="${r.id}">Hapus</button></div></div></div>`).join('')}</div>`;
 }
