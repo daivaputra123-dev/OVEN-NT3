@@ -90,6 +90,17 @@ input[type=date],select{width:100%;padding:12px;border:2.5px solid var(--ink);bo
 .ent{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line)}
 .edf{background:var(--bg);border:2.5px solid var(--ink);border-radius:12px;padding:12px;margin:6px 0}
 .stp{display:flex;gap:8px;align-items:center}.stp input{text-align:center;width:90px}.stp .btn{padding:8px 18px}
+.tb{width:100%;border-collapse:collapse;font-size:.92rem;min-width:540px}
+.tb th,.tb td{padding:8px 6px;border-bottom:1px dashed var(--line);text-align:right;white-space:nowrap}
+.tb th:first-child,.tb td:first-child{text-align:left;font-weight:800}
+.tb th{color:var(--soft);font-size:.82rem}
+.tb tr[data-d]{cursor:pointer}.tb tr[data-d]:hover{background:var(--bg)}
+.sec{font-family:Bevan,serif;font-size:1.15rem;color:var(--brown);margin:22px 0 8px;font-weight:400}
+.cats5{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:8px 0 14px}
+.cb{border:3px solid var(--ink);border-radius:14px;background:var(--panel);padding:14px 8px;text-align:center;box-shadow:4px 4px 0 var(--ink)}
+.cb span{display:block;font-weight:800;font-size:1.05rem;color:var(--brown)}
+.cb b{display:block;font-family:Bevan,serif;font-size:2.4rem;line-height:1.15;font-weight:400}
+.cb small{color:var(--soft);font-weight:700}
 </style>
 </head>
 <body>
@@ -174,7 +185,7 @@ input[type=date],select{width:100%;padding:12px;border:2.5px solid var(--ink);bo
 </div></section>
 
 <section class="view" id="v-dash">
- <div class="tabs"><h2 id="dtitle">Monitoring oven</h2><div class="who"><span class="note" id="cnt"></span><button class="btn alt sm" id="back" hidden>← Kalender</button><button class="btn alt sm" id="mode" hidden>Tampilan: per operator</button><button class="btn alt sm" id="ref">Muat ulang</button><button class="btn sm" id="csv">Unduh data (CSV)</button></div></div>
+ <div class="tabs"><h2 id="dtitle">Monitoring oven</h2><div class="who"><span class="note" id="cnt"></span><button class="btn alt sm" id="back" hidden>← Kalender</button><button class="btn alt sm" id="ref">Muat ulang</button><button class="btn sm" id="csv">Unduh data (CSV)</button></div></div>
  <div id="cal"></div>
  <div id="days" hidden></div>
 </section>
@@ -187,7 +198,7 @@ if(!SB_URL||!SB_KEY)document.body.insertAdjacentHTML('afterbegin','<p style="pad
 const sb=supabase.createClient(SB_URL||'https://example.supabase.co',SB_KEY||'kosong');
 const CATS=['AB','TO','GK AO','BK AO','GJ'],$=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[<>&"']/g,'');
-let user=null,opn=null,cat=null,pend=null,rows=[],timer=null,wad=null,recap={},kgm={},mode='op',base=null,hasil=null,selAt=null,curDay=null,cm=new Date(new Date().getFullYear(),new Date().getMonth(),1),sel=null,mrows=[],fin={},rrows=[];
+let user=null,opn=null,cat=null,pend=null,rows=[],timer=null,wad=null,recap={},kgm={},base=null,hasil=null,selAt=null,curDay=null,cm=new Date(new Date().getFullYear(),new Date().getMonth(),1),sel=null,mrows=[],fin={},rrows=[];
 try{opn=sessionStorage.getItem('nt3op')}catch(e){}
 const WAJIB=['AB','TO','GK AO','BK AO'];
 const WADAH=[['Box kuning',2.56],['Box putih tanpa tutup',0.7],['Box putih dengan tutup',0.98],['Plastik koli',0.02]];
@@ -378,7 +389,7 @@ async function fetchRange(a,b,cols){
   if(error)return {error};all=all.concat(data);if(data.length<1000||all.length>=10000)break;from+=1000}
  return {data:all};
 }
-function bar(){$('cal').hidden=!!sel;$('days').hidden=!sel;$('back').hidden=!sel;$('mode').hidden=!sel;
+function bar(){$('cal').hidden=!!sel;$('days').hidden=!sel;$('back').hidden=!sel;
  $('dtitle').textContent=sel?new Date(sel+'T00:00:00').toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):'Monitoring oven'}
 function load(){return sel?loadDay():loadMonth()}
 async function loadMonth(){
@@ -401,13 +412,18 @@ function drawCal(){
  const today=dk(Date.now());
  for(let i=1;i<=nd;i++){const d=y+'-'+String(m+1).padStart(2,'0')+'-'+String(i).padStart(2,'0'),n=cnt[d]||0;
   cells+=`<button class="dc${n?' has':''}${d===today?' tdy':''}" data-d="${d}"${n?'':' disabled'} aria-label="${i} ${BULAN[m]}, ${n} foto"><span>${i}</span><small>${n?n+' foto'+(ds[d]?' ✓':''):''}</small></button>`}
+ const byD={};mrows.forEach(r=>(byD[dk(r.ts)]??=[]).push(r));
+ const f=v=>v==null?'–':r2(v);
+ const rowsHtml=Object.keys(byD).sort().reverse().map(d=>{const L=byD[d],s=c=>{const a=L.filter(r=>r.cat===c);return a.length?a.reduce((x,r)=>x+Math.abs(Number(r.kg)),0):null},ab=s('AB'),to=s('TO'),gk=s('GK AO'),bk=s('BK AO');
+  return `<tr data-d="${d}"><td>${Number(d.slice(8))} ${BULAN[m].slice(0,3)}</td><td>${f(ab)}</td><td>${f(to)}</td><td>${f(gk)}</td><td>${f(bk)}</td><td>${f(s('GJ'))}</td><td>${ab&&to!=null?p(ab-to,ab):'–'}</td><td>${p(gk,to)}</td><td>${p(bk,to)}</td></tr>`}).join('');
  $('cal').innerHTML=`<div class="nav"><button class="btn alt sm" id="pm" aria-label="Bulan sebelumnya">‹</button><h2>${BULAN[m]} ${y}</h2><button class="btn alt sm" id="nm" aria-label="Bulan berikutnya">›</button></div>
- <div class="stats"><div class="stat"><b>${AB&&TO?p(AB-TO,AB):'–'}</b><span>Susut oven (akumulasi)</span></div><div class="stat"><b>${p(GK,TO)}</b><span>%GK</span></div><div class="stat"><b>${p(BK,TO)}</b><span>%BK</span></div></div>
- <p class="note">Total bulan ini: AB ${r2(AB)} kg · TO ${r2(TO)} kg · GK AO ${r2(GK)} kg · BK AO ${r2(BK)} kg${AB&&TO>AB?' <span class="warn">⚠ TO lebih besar dari AB</span>':''}</p>
- <div class="cal">${cells}</div><p class="note">Pilih tanggal untuk melihat hari itu saja. Tanda ✓ berarti ada operator yang sudah menekan Selesai.</p>`;
+ <h3 class="sec">Total bulan ini</h3>${boxes(mrows)}
+ <div class="stats"><div class="stat"><b>${AB&&TO?p(AB-TO,AB):'–'}</b><span>Susut oven (akumulasi)</span></div><div class="stat"><b>${p(GK,TO)}</b><span>%GK</span></div><div class="stat"><b>${p(BK,TO)}</b><span>%BK</span></div></div>${AB&&TO>AB?'<div class="warn">⚠ TO lebih besar dari AB</div>':''}
+ <h3 class="sec">Pilih tanggal</h3><div class="cal">${cells}</div><p class="note">Tanda ✓ berarti ada operator yang sudah menekan Selesai.</p>
+ <h3 class="sec">Hasil total per hari</h3>${rowsHtml?`<div style="overflow-x:auto"><table class="tb"><thead><tr><th>Tanggal</th><th>AB</th><th>TO</th><th>GK AO</th><th>BK AO</th><th>GJ</th><th>Susut</th><th>%GK</th><th>%BK</th></tr></thead><tbody>${rowsHtml}</tbody></table></div><p class="note">Angka dalam kg. Klik satu baris untuk membuka hari itu.</p>`:'<div class="empty">Belum ada data bulan ini.</div>'}`;
  $('pm').onclick=()=>{cm=new Date(y,m-1,1);loadMonth()};$('nm').onclick=()=>{cm=new Date(y,m+1,1);loadMonth()};
 }
-$('cal').onclick=e=>{const b=e.target.closest('.dc');if(b&&b.dataset.d){sel=b.dataset.d;rows=[];loadDay()}};
+$('cal').onclick=e=>{const b=e.target.closest('.dc,tr[data-d]');if(b&&b.dataset.d){sel=b.dataset.d;rows=[];loadDay()}};
 $('back').onclick=()=>{sel=null;rows=[];loadMonth()};
 async function loadDay(){
  bar();
@@ -417,24 +433,26 @@ async function loadDay(){
  if(rows.length){const {data:u}=await sb.storage.from('foto').createSignedUrls(rows.map(r=>r.photo_path),3600);const mp={};(u||[]).forEach(x=>{if(x.signedUrl)mp[x.path]=x.signedUrl});rows.forEach(r=>r.url=mp[r.photo_path])}
  draw();
 }
-function grp(L){
+function boxes(L){
+ return '<div class="cats5">'+CATS.map(c=>{const a=L.filter(r=>r.cat===c),s=a.reduce((x,r)=>x+Math.abs(Number(r.kg)),0);
+  return `<div class="cb"><span>${c}${c==='GJ'?' (opsional)':''}</span><b>${a.length?r2(s):'–'}</b><small>${a.length?'kg · '+a.length+' timbang':'belum ada'}</small></div>`}).join('')+'</div>';
+}
+function hasilHari(L){
  const sum=c=>{const a=L.filter(r=>r.cat===c);return a.length?a.reduce((s,r)=>s+Math.abs(Number(r.kg)),0):null};
- const AB=sum('AB'),TO=sum('TO'),GK=sum('GK AO'),BK=sum('BK AO');
- const miss=WAJIB.filter(c=>!L.some(r=>r.cat===c));
- const warn=(AB&&TO!=null&&TO>AB)?'<div class="warn">⚠ TO lebih besar dari AB. Cek foto dan angkanya.</div>':'';
- const tot=CATS.map(c=>{const a=L.filter(r=>r.cat===c);return c+': '+(a.length?r2(sum(c))+' kg ('+a.length+')':'–')}).join(' · ');
- return `<div class="stats"><div class="stat"><b>${(AB&&TO!=null)?p(AB-TO,AB):'–'}</b><span>Susut oven</span></div><div class="stat"><b>${p(GK,TO)}</b><span>%GK</span></div><div class="stat"><b>${p(BK,TO)}</b><span>%BK</span></div></div>${warn}
- <p class="note">${tot}</p>
- <p>${miss.length?'<span class="miss">Kurang: '+miss.join(', ')+'</span>':'<span class="okc">Semua kategori wajib lengkap ✓</span>'}</p>
- <div class="grid">${L.map(r=>`<div class="ph"><img src="${r.url||''}" alt="Foto ${esc(r.cat)}" loading="lazy"><div><b>${esc(r.cat)}: ${Number(r.kg)} kg</b>${r.edited?' <span class="note">(diedit)</span>':''}${r.wadah?'<div class="note">Bruto '+Number(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah)+'</div>':''}<div class="note">${fmt(r.ts)}<br>Oleh ${esc(r.operator)}</div>
- <div class="row"><button class="btn sm" data-dl="${r.id}">Unduh</button><button class="btn danger sm" data-del="${r.id}">Hapus</button></div></div></div>`).join('')}</div>`;
+ const AB=sum('AB'),TO=sum('TO'),GK=sum('GK AO'),BK=sum('BK AO'),miss=WAJIB.filter(c=>!L.some(r=>r.cat===c));
+ return `<div class="stats"><div class="stat"><b>${(AB&&TO!=null)?p(AB-TO,AB):'–'}</b><span>Susut oven</span></div><div class="stat"><b>${p(GK,TO)}</b><span>%GK</span></div><div class="stat"><b>${p(BK,TO)}</b><span>%BK</span></div></div>${(AB&&TO!=null&&TO>AB)?'<div class="warn">⚠ TO lebih besar dari AB. Cek foto dan angkanya.</div>':''}
+ <p>${miss.length?'<span class="miss">Kurang: '+miss.join(', ')+'</span>':'<span class="okc">Semua kategori wajib lengkap ✓</span>'}</p>`;
+}
+function card(r){
+ return `<div class="ph"><img src="${r.url||''}" alt="Foto ${esc(r.cat)}" loading="lazy"><div><b>${esc(r.cat)}: ${Number(r.kg)} kg</b>${r.edited?' <span class="note">(diedit)</span>':''}${r.wadah?'<div class="note">Bruto '+Number(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah)+'</div>':''}<div class="note">${fmt(r.ts)}<br>Oleh ${esc(r.operator)}</div>
+ <div class="row"><button class="btn sm" data-dl="${r.id}">Unduh</button><button class="btn danger sm" data-del="${r.id}">Hapus</button></div></div></div>`;
 }
 function draw(){
  $('cnt').textContent=rows.length+' foto';
  if(!rows.length){$('days').innerHTML='<div class="empty">Belum ada foto di tanggal ini.</div>';return}
- const parts={};rows.forEach(r=>{const n=mode==='op'?String(r.operator).trim().toLowerCase():'all';(parts[n]??=[]).push(r)});
- $('days').innerHTML=Object.keys(parts).map(n=>{const f=fin[n+'|'+sel];
-  return `<div class="mgrp">${mode==='op'?'<h3>Operator: '+esc(parts[n][0].operator)+' '+(f?'<span class="okc">Selesai ✓ '+hm(f)+'</span>':'<span class="miss">Belum selesai</span>')+'</h3>':''}${grp(parts[n])}</div>`}).join('');
+ const ops={};rows.forEach(r=>{ops[String(r.operator).trim().toLowerCase()]=r.operator});
+ const st=Object.keys(ops).map(n=>esc(ops[n])+(fin[n+'|'+sel]?' <span class="okc">✓ '+hm(fin[n+'|'+sel])+'</span>':' <span class="miss">belum selesai</span>')).join(' · ');
+ $('days').innerHTML='<h3 class="sec">Total hari ini</h3>'+boxes(rows)+hasilHari(rows)+'<p class="note">Status selesai: '+st+'</p><h3 class="sec">Foto hari ini</h3><div class="grid">'+rows.map(card).join('')+'</div>';
 }
 function save(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
 $('days').onclick=async e=>{
@@ -454,7 +472,6 @@ $('days').onclick=async e=>{
  }
 };
 $('ref').onclick=load;
-$('mode').onclick=()=>{mode=mode==='op'?'all':'op';$('mode').textContent='Tampilan: '+(mode==='op'?'per operator':'gabungan');draw()};
 $('csv').onclick=async()=>{
  const a=sel?new Date(sel+'T00:00:00'):new Date(cm.getFullYear(),cm.getMonth(),1),b=sel?new Date(a.getTime()+864e5):new Date(cm.getFullYear(),cm.getMonth()+1,1);
  const r=await fetchRange(a,b,'*');if(r.error)return;
