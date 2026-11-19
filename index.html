@@ -165,10 +165,10 @@ if(!SB_URL||!SB_KEY)document.body.insertAdjacentHTML('afterbegin','<p style="pad
 const sb=supabase.createClient(SB_URL||'https://example.supabase.co',SB_KEY||'kosong');
 const CATS=['AB','TO','GK AO','BK AO','GJ'],$=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[<>&"']/g,'');
-let user=null,opn=null,cat=null,pend=null,rows=[],timer=null,wad=null,recap={},kgm={},mode='op';
+let user=null,opn=null,cat=null,pend=null,rows=[],timer=null,wad=null,recap={},kgm={},mode='op',base=null,hasil=null;
 try{opn=sessionStorage.getItem('nt3op')}catch(e){}
 const WAJIB=['AB','TO','GK AO','BK AO'];
-const WADAH=[['Tanpa wadah',0],['Box kuning',2.56],['Box putih tanpa tutup',0.7],['Box putih dengan tutup',0.98],['Plastik koli',0.02]];
+const WADAH=[['Box kuning',2.56],['Box putih tanpa tutup',0.7],['Box putih dengan tutup',0.98],['Plastik koli',0.02]];
 
 function go(v){
  if(v==='dash'&&!user)v='login';
@@ -224,12 +224,25 @@ WADAH.forEach(([n,tr])=>{const b=document.createElement('button');b.className='c
  b.onclick=()=>{wad=[n,tr];[...$('wd').children].forEach(x=>{x.classList.toggle('on',x===b);x.setAttribute('aria-checked',x===b)});calc()};
  $('wd').appendChild(b)});
 function clearWad(){wad=null;[...$('wd').children].forEach(x=>{x.classList.remove('on');x.setAttribute('aria-checked','false')})}
-function calc(){
+function calc0(){
  const raw=parseFloat($('kg').value);
  if(!wad||isNaN(raw)){$('net').textContent='–';$('netf').textContent=wad?'Isi angka timbangan':'Pilih jenis wadah';return null}
  const br=Math.abs(raw),net=Math.round((br-wad[1])*100)/100;
  if(net<0){$('net').textContent='–';$('netf').innerHTML='<span class="warn">Angka lebih kecil dari berat wadah ('+wad[1]+' kg). Cek angka atau jenis wadah.</span>';return null}
  $('net').textContent=net+' kg';$('netf').textContent=br+' − '+wad[1]+' = berat bersih';return {br,net};
+}
+function calc(){hasil=calc0();render();return hasil}
+function render(){
+ if(!base||!pend)return;
+ const c=$('pv'),W=base.width,H=base.height,x=c.getContext('2d');
+ c.width=W;c.height=H;x.drawImage(base,0,0);
+ const dt=new Date(pend.ts),L=[pend.by+'  |  '+dt.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})+'  |  '+dt.toLocaleTimeString('id-ID',{hour12:false}).replace(/\./g,':')+'  |  '+pend.cat+(pend.gal?'  |  galeri':'')];
+ if(hasil&&wad)L.push('Bersih: '+hasil.net+' kg  ('+hasil.br+' − '+wad[0]+' '+wad[1]+')');
+ const lh=Math.max(32,W/17);let fs=lh*.58;x.font='700 '+fs+'px Nunito,sans-serif';
+ while(L.some(l=>x.measureText(l).width>W-34)&&fs>10){fs-=1;x.font='700 '+fs+'px Nunito,sans-serif'}
+ const bh=lh*L.length+8;x.fillStyle='rgba(30,15,5,.88)';x.fillRect(0,H-bh,W,bh);x.textBaseline='middle';
+ L.forEach((l,i)=>{x.fillStyle=i?'#FFD27A':'#F6E7C8';x.fillText(l,18,H-bh+4+lh*i+lh/2)});
+ const lw=Math.max(6,W/90);x.lineWidth=lw;x.strokeStyle='#E2B26A';x.strokeRect(lw/2,lw/2,W-lw,H-lw);
 }
 $('kg').oninput=calc;
 $('shoot').onclick=()=>$('file').click();
@@ -241,17 +254,11 @@ $('file').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)proses(f
 $('gal').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)proses(f,true)};
 async function proses(f,gal){
  const ts=gal&&f.lastModified?f.lastModified:Date.now(),bmp=await createImageBitmap(f);
- const W=Math.min(800,bmp.width),H=Math.round(bmp.height*W/bmp.width),c=$('pv');
- c.width=W;c.height=H;const x=c.getContext('2d');x.drawImage(bmp,0,0,W,H);
- const b64=c.toDataURL('image/jpeg',.8).split(',')[1];
- const dt=new Date(ts),tx=opn+'  |  '+dt.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})+'  |  '+dt.toLocaleTimeString('id-ID',{hour12:false}).replace(/\./g,':')+'  |  '+cat+(gal?'  |  galeri':'');
- const bh=Math.max(34,W/16);let fs=bh*.55;x.font='700 '+fs+'px Nunito,sans-serif';
- while(x.measureText(tx).width>W-34&&fs>10){fs-=1;x.font='700 '+fs+'px Nunito,sans-serif'}
- x.fillStyle='rgba(30,15,5,.88)';x.fillRect(0,H-bh,W,bh);x.fillStyle='#FFD27A';x.textBaseline='middle';x.fillText(tx,18,H-bh/2);
- const lw=Math.max(6,W/90);x.lineWidth=lw;x.strokeStyle='#E2B26A';x.strokeRect(lw/2,lw/2,W-lw,H-lw);
- const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.7));
- pend={cat,ts,by:opn,blob};
- c.hidden=false;$('pvE').hidden=true;$('form').hidden=false;$('stamp').textContent=dt.toLocaleString('id-ID',{hour12:false}).replace(/\./g,':');$('kg').value='';$('omsg').textContent='';clearWad();calc();
+ const W=Math.min(800,bmp.width),H=Math.round(bmp.height*W/bmp.width);
+ base=document.createElement('canvas');base.width=W;base.height=H;base.getContext('2d').drawImage(bmp,0,0,W,H);
+ const b64=base.toDataURL('image/jpeg',.8).split(',')[1],dt=new Date(ts);
+ pend={cat,ts,by:opn,gal};
+ $('pv').hidden=false;$('pvE').hidden=true;$('form').hidden=false;$('stamp').textContent=dt.toLocaleString('id-ID',{hour12:false}).replace(/\./g,':');$('kg').value='';$('omsg').textContent='';clearWad();calc();
  detect(b64);
 };
 async function detect(b64){
@@ -270,6 +277,7 @@ $('save').onclick=async()=>{
  $('save').disabled=true;m.textContent='Menyimpan…';
  try{
   const d=new Date(pend.ts),path=d.getFullYear()+'/'+(d.getMonth()+1)+'/'+pend.ts+'-'+Math.random().toString(36).slice(2,8)+'.jpg';
+  pend.blob=await new Promise(r=>$('pv').toBlob(r,'image/jpeg',.7));
   const up=await sb.storage.from('foto').upload(path,pend.blob,{contentType:'image/jpeg'});
   if(up.error)throw up.error;
   const ins=await sb.from('timbang').insert({cat:pend.cat,kg:h.net,bruto:h.br,wadah:wad[0],ts:new Date(pend.ts).toISOString(),operator:pend.by,edited:pend.ai!==h.br,photo_path:path});
