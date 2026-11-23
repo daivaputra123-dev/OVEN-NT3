@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#6B3E1F">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co; connect-src https://*.supabase.co; object-src 'none'; base-uri 'none'; form-action 'none'">
+<script>if(top!==self)document.documentElement.innerHTML=''</script>
 <title>Oven NT3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -106,6 +109,7 @@ input[type=date],select{width:100%;padding:12px;border:2.5px solid var(--ink);bo
 <body>
 <div class="wrap">
 <header><button class="logo" onclick="go('home')" aria-label="Beranda Oven NT3">Oven NT3</button><div class="who" id="who"></div></header>
+<button class="btn alt sm" id="kb" hidden style="margin:6px 0 12px">← Kembali</button>
 
 <section class="view on" id="v-home">
  <div class="hero">
@@ -196,7 +200,7 @@ input[type=date],select{width:100%;padding:12px;border:2.5px solid var(--ink);bo
 <script>
 const {url:SB_URL,key:SB_KEY,fn:FN}=window.NT3||{};
 if(!SB_URL||!SB_KEY)document.body.insertAdjacentHTML('afterbegin','<p style="padding:12px;margin:0;background:#A8431F;color:#fff;font-weight:800">File config.js belum ada atau belum diisi.</p>');
-const sb=supabase.createClient(SB_URL||'https://example.supabase.co',SB_KEY||'kosong');
+const sb=supabase.createClient(SB_URL||'https://example.supabase.co',SB_KEY||'kosong',{auth:{storage:window.sessionStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
 const CATS=['AB','TO','GK AO','BK AO','GJ'],$=id=>document.getElementById(id);
 const nf=x=>String(Math.round(Number(x)*100)/100).replace('.',',');
 const num=s=>{s=String(s).trim().replace(/\s/g,'');return /^-?(\d+([.,]\d*)?|[.,]\d+)$/.test(s)?parseFloat(s.replace(',','.')):NaN};
@@ -206,9 +210,12 @@ try{opn=sessionStorage.getItem('nt3op')}catch(e){}
 const WAJIB=['AB','TO','GK AO','BK AO'];
 const WADAH=[['Box kuning',2.56],['Box putih tanpa tutup',0.7],['Box putih dengan tutup',0.98],['Plastik koli',0.02]];
 
-function go(v){
+let curV='home';
+function go(v,pop,rep){
  if(v==='dash'&&!user)v='login';
  if((v==='op'||v==='riw')&&!opn)v='oplogin';
+ if(!pop){if(rep)history.replaceState({v},'');else if(v!==curV)history.pushState({v},'')}
+ curV=v;$('kb').hidden=v==='home';
  document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
  clearInterval(timer);if(v==='dash'){load();timer=setInterval(load,30000)}
  if(v==='op')recapLoad();
@@ -219,7 +226,7 @@ function hdr(){
  const nm=user?esc(user.email.split('@')[0]):'';
  $('who').innerHTML=user?`<span>Halo, ${nm}</span><button class="btn sm" onclick="go('dash')">Monitoring</button><button class="btn alt sm" id="out">Keluar</button>`
   :opn?`<span>Operator: ${opn}</span><button class="btn alt sm" id="out">Keluar</button>`:'';
- if($('out'))$('out').onclick=async()=>{if(user)await sb.auth.signOut();user=null;opn=null;try{sessionStorage.removeItem('nt3op')}catch(e){}rows=[];reset();go('home')};
+ if($('out'))$('out').onclick=async()=>{if(user)await sb.auth.signOut();user=null;opn=null;try{sessionStorage.removeItem('nt3op')}catch(e){}rows=[];mrows=[];reset();go('home',false,true)};
 }
 sb.auth.getSession().then(({data})=>{user=data.session?.user||null;hdr()});
 sb.auth.onAuthStateChange((_,s)=>{user=s?.user||null;hdr()});
@@ -228,8 +235,8 @@ $('lgo').onclick=async()=>{
  $('lmsg').textContent='Memeriksa…';
  const {error}=await sb.auth.signInWithPassword({email:$('le').value.trim().toLowerCase(),password:$('lp').value});
  if(error){const c=(error.code||'')+' '+(error.message||'');
-  $('lmsg').textContent=(error.status===429||/rate.?limit/i.test(c))?'Terlalu banyak percobaan masuk. Tunggu beberapa menit, lalu coba lagi.':/invalid.?(login|credentials)/i.test(c)?'Email atau kata sandi salah.':'Gagal masuk: '+(error.message||'periksa koneksi internet')+(error.status?' ('+error.status+')':'');return}
- $('lmsg').textContent='';$('lp').value='';go('dash');
+  $('lmsg').textContent=(error.status===429||/rate.?limit/i.test(c))?'Terlalu banyak percobaan masuk. Tunggu beberapa menit, lalu coba lagi.':/invalid.?(login|credentials)/i.test(c)?'Email atau kata sandi salah.':'Gagal masuk: '+(error.message||'periksa koneksi internet')+(error.status?' ('+error.status+')':'');if(++fails>=5){$('lgo').disabled=true;$('lmsg').textContent+=' Tunggu 30 detik.';setTimeout(()=>{$('lgo').disabled=false;fails=0},30000)}return}
+ $('lmsg').textContent='';$('lp').value='';fails=0;touch();go('dash',false,true);
 };
 $('sp').onchange=()=>{$('lp').type=$('sp').checked?'text':'password'};
 $('lp').onkeydown=e=>{if(e.key==='Enter')$('lgo').click()};
@@ -237,7 +244,7 @@ $('ogo').onclick=()=>{
  const n=$('on').value.replace(/[<>&"'`]/g,'').trim();
  if(!n){$('omsg2').textContent='Isi nama dulu.';return}
  opn=n;try{sessionStorage.setItem('nt3op',n)}catch(e){}
- $('omsg2').textContent='';go('op');
+ $('omsg2').textContent='';go('op',false,true);
 };
 $('on').onkeydown=e=>{if(e.key==='Enter')$('ogo').click()};
 
@@ -325,7 +332,7 @@ $('save').onclick=async()=>{
   pend.blob=await new Promise(r=>$('pv').toBlob(r,'image/jpeg',.7));
   const up=await sb.storage.from('foto').upload(path,pend.blob,{contentType:'image/jpeg'});
   if(up.error)throw up.error;
-  const ins=await sb.from('timbang').insert({cat:pend.cat,kg:h.net,bruto:h.br,wadah:wad[0],jumlah_wadah:h.n,ts:new Date(pend.ts).toISOString(),operator:pend.by,edited:pend.ai!==h.br,photo_path:path});
+  const ins=await sb.from('timbang').insert({cat:pend.cat,kg:h.net,bruto:h.br,wadah:wad[0],jumlah_wadah:h.n,ts:new Date(pend.ts).toISOString(),operator:pend.by,edited:pend.ai!=null&&pend.ai!==h.br,photo_path:path});
   if(ins.error)throw ins.error;
   const sv=pend.cat+' '+nf(h.net);recap[pend.cat]=(recap[pend.cat]||0)+1;kgm[pend.cat]=Math.round(((kgm[pend.cat]||0)+h.net)*100)/100;cat=null;paint();$('shoot').disabled=$('galbtn').disabled=true;$('hint').textContent='Pilih kategori berikutnya.';
   reset();m.className='msg ok';m.textContent='Tersimpan ✓ '+sv+' kg';recapLoad();
@@ -428,14 +435,14 @@ function drawCal(){
  <h3 class="sec">Hasil total per hari</h3>${rowsHtml?`<div style="overflow-x:auto"><table class="tb"><thead><tr><th>Tanggal</th><th>AB</th><th>TO</th><th>GK AO</th><th>BK AO</th><th>GJ</th><th>Susut</th><th>%GK</th><th>%BK</th></tr></thead><tbody>${rowsHtml}</tbody></table></div><p class="note">Angka dalam kg. Klik satu baris untuk membuka hari itu.</p>`:'<div class="empty">Belum ada data bulan ini.</div>'}`;
  $('pm').onclick=()=>{cm=new Date(y,m-1,1);loadMonth()};$('nm').onclick=()=>{cm=new Date(y,m+1,1);loadMonth()};
 }
-$('cal').onclick=e=>{const b=e.target.closest('.dc,tr[data-d]');if(b&&b.dataset.d){sel=b.dataset.d;rows=[];loadDay()}};
-$('back').onclick=()=>{sel=null;rows=[];loadMonth()};
+$('cal').onclick=e=>{const b=e.target.closest('.dc,tr[data-d]');if(b&&b.dataset.d){sel=b.dataset.d;rows=[];history.pushState({v:'dash',day:1},'');loadDay()}};
+$('back').onclick=()=>history.back();
 async function loadDay(){
  bar();
  const a=new Date(sel+'T00:00:00'),r=await fetchRange(a,new Date(a.getTime()+864e5),'*');
  if(r.error){$('days').innerHTML='<div class="empty">Data tidak bisa dimuat. Coba muat ulang atau masuk lagi.</div>';return}
  rows=r.data;
- if(rows.length){const {data:u}=await sb.storage.from('foto').createSignedUrls(rows.map(r=>r.photo_path),3600);const mp={};(u||[]).forEach(x=>{if(x.signedUrl)mp[x.path]=x.signedUrl});rows.forEach(r=>r.url=mp[r.photo_path])}
+ if(rows.length){const {data:u}=await sb.storage.from('foto').createSignedUrls(rows.map(r=>r.photo_path),600);const mp={};(u||[]).forEach(x=>{if(x.signedUrl)mp[x.path]=x.signedUrl});rows.forEach(r=>r.url=mp[r.photo_path])}
  draw();
 }
 function boxes(L){
@@ -480,11 +487,19 @@ $('ref').onclick=load;
 $('csv').onclick=async()=>{
  const a=sel?new Date(sel+'T00:00:00'):new Date(cm.getFullYear(),cm.getMonth(),1),b=sel?new Date(a.getTime()+864e5):new Date(cm.getFullYear(),cm.getMonth()+1,1);
  const r=await fetchRange(a,b,'*');if(r.error)return;
- const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+ const q=v=>{let s=String(v??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'};
  const lines=[['Tanggal','Jam','Operator','Kategori','Bruto (kg)','Wadah','Jumlah wadah','Bersih (kg)','Diedit','File'].join(',')];
  r.data.forEach(x=>lines.push([dk(x.ts),hm(x.ts),x.operator,x.cat,x.bruto??'',x.wadah??'',x.jumlah_wadah??'',x.kg,x.edited?'ya':'tidak',x.photo_path].map(q).join(',')));
  save(new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv'}),'data-oven-nt3-'+(sel||(cm.getFullYear()+'-'+String(cm.getMonth()+1).padStart(2,'0')))+'.csv');
 };
+/* ===== Navigasi kembali & keamanan sesi ===== */
+$('kb').onclick=()=>{if(history.state&&history.state.v&&history.state.v!=='home')history.back();else go('home',false,true)};
+addEventListener('popstate',e=>{const s=e.state||{v:'home'};if(s.v==='dash'&&!s.day)sel=null;go(s.v,true)});
+history.replaceState({v:'home'},'');
+let idle=null,fails=0;
+function touch(){clearTimeout(idle);if(!user)return;idle=setTimeout(async()=>{await sb.auth.signOut();user=null;rows=[];mrows=[];$('lmsg').textContent='Sesi berakhir karena lama tidak aktif. Silakan masuk lagi.';hdr();go('home',false,true)},20*60*1000)}
+['click','keydown','touchstart'].forEach(ev=>addEventListener(ev,touch,{passive:true}));
+sb.auth.getSession().then(()=>touch());
 hdr();
 </script>
 </body>
