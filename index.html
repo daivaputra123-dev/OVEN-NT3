@@ -138,6 +138,7 @@ input[type=date],select{width:100%;padding:12px;border:2.5px solid var(--ink);bo
  <h2>Masuk tim NT3</h2><p class="note">Untuk Irene, Daiva, dan Rayyan. Operator tidak perlu masuk.</p>
  <label for="le">Email</label><input type="email" id="le" autocomplete="username">
  <label for="lp">Kata sandi</label><input type="password" id="lp" autocomplete="current-password">
+ <label class="note" style="display:flex;gap:8px;align-items:center;font-weight:600;margin-top:8px"><input type="checkbox" id="sp" style="width:auto"> Tampilkan sandi</label>
  <div class="cta"><button class="btn" id="lgo">Masuk</button></div><div class="msg err" id="lmsg" role="alert"></div>
 </div></section>
 
@@ -225,10 +226,12 @@ sb.auth.onAuthStateChange((_,s)=>{user=s?.user||null;hdr()});
 
 $('lgo').onclick=async()=>{
  $('lmsg').textContent='Memeriksa…';
- const {error}=await sb.auth.signInWithPassword({email:$('le').value.trim(),password:$('lp').value});
- if(error){$('lmsg').textContent='Email atau kata sandi salah.';return}
+ const {error}=await sb.auth.signInWithPassword({email:$('le').value.trim().toLowerCase(),password:$('lp').value});
+ if(error){const c=(error.code||'')+' '+(error.message||'');
+  $('lmsg').textContent=(error.status===429||/rate.?limit/i.test(c))?'Terlalu banyak percobaan masuk. Tunggu beberapa menit, lalu coba lagi.':/invalid.?(login|credentials)/i.test(c)?'Email atau kata sandi salah.':'Gagal masuk: '+(error.message||'periksa koneksi internet')+(error.status?' ('+error.status+')':'');return}
  $('lmsg').textContent='';$('lp').value='';go('dash');
 };
+$('sp').onchange=()=>{$('lp').type=$('sp').checked?'text':'password'};
 $('lp').onkeydown=e=>{if(e.key==='Enter')$('lgo').click()};
 $('ogo').onclick=()=>{
  const n=$('on').value.replace(/[<>&"'`]/g,'').trim();
