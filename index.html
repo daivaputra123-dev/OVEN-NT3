@@ -104,6 +104,12 @@ input[type=date],select{width:100%;padding:12px;border:2.5px solid var(--ink);bo
 .cb span{display:block;font-weight:800;font-size:1.05rem;color:var(--brown)}
 .cb b{display:block;font-family:Bevan,serif;font-size:2.4rem;line-height:1.15;font-weight:400}
 .cb small{color:var(--soft);font-weight:700}
+.md{position:fixed;inset:0;background:rgba(20,10,3,.88);display:flex;justify-content:center;overflow:auto;padding:14px;z-index:50}
+.md[hidden]{display:none}
+.mbox{background:var(--panel);border:2.5px solid var(--ink);border-radius:16px;padding:14px;max-width:780px;width:100%;margin:auto}
+.mbox img{width:100%;max-height:68vh;object-fit:contain;background:#000;border-radius:10px;display:block}
+.mtop{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}.mtop b{font-family:Bevan,serif;font-weight:400;font-size:1.3rem;color:var(--brown)}
+.ph img[data-view]{cursor:zoom-in}
 </style>
 </head>
 <body>
@@ -195,6 +201,15 @@ input[type=date],select{width:100%;padding:12px;border:2.5px solid var(--ink);bo
  <div id="days" hidden></div>
 </section>
 <footer>Oven NT3</footer>
+<div id="md" class="md" role="dialog" aria-modal="true" aria-label="Detail foto timbang" hidden>
+ <div class="mbox">
+  <div class="mtop"><b id="mt"></b><button class="btn alt sm" id="mx" aria-label="Tutup">✕ Tutup</button></div>
+  <img id="mi" alt="">
+  <div class="note" id="mc" style="margin:8px 0"></div>
+  <div class="cta" style="margin-top:8px"><button class="btn alt sm" id="mp">‹ Sebelumnya</button><button class="btn alt sm" id="mn">Berikutnya ›</button><button class="btn sm" id="me">Edit</button></div>
+  <div id="mf"></div>
+ </div>
+</div>
 </div>
 
 <script>
@@ -403,7 +418,7 @@ async function fetchRange(a,b,cols){
 }
 function bar(){$('cal').hidden=!!sel;$('days').hidden=!sel;$('back').hidden=!sel;
  $('dtitle').textContent=sel?new Date(sel+'T00:00:00').toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):'Monitoring oven'}
-function load(){return sel?loadDay():loadMonth()}
+function load(){if(!$('md').hidden)return;return sel?loadDay():loadMonth()}
 async function loadMonth(){
  bar();
  const a=new Date(cm.getFullYear(),cm.getMonth(),1),b=new Date(cm.getFullYear(),cm.getMonth()+1,1);
@@ -456,8 +471,8 @@ function hasilHari(L){
  <p>${miss.length?'<span class="miss">Kurang: '+miss.join(', ')+'</span>':'<span class="okc">Semua kategori wajib lengkap ✓</span>'}</p>`;
 }
 function card(r){
- return `<div class="ph"><img src="${r.url||''}" alt="Foto ${esc(r.cat)}" loading="lazy"><div><b>${esc(r.cat)}: ${nf(r.kg)} kg</b>${r.edited?' <span class="note">(diedit)</span>':''}${r.wadah?'<div class="note">Bruto '+nf(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah)+'</div>':''}<div class="note">${fmt(r.ts)}<br>Oleh ${esc(r.operator)}</div>
- <div class="row"><button class="btn sm" data-dl="${r.id}">Unduh</button><button class="btn danger sm" data-del="${r.id}">Hapus</button></div></div></div>`;
+ return `<div class="ph"><img data-view="${r.id}" src="${r.url||''}" alt="Foto ${esc(r.cat)}, klik untuk memperbesar" loading="lazy"><div><b>${esc(r.cat)}: ${nf(r.kg)} kg</b>${r.edited?' <span class="note">(diedit)</span>':''}${r.wadah?'<div class="note">Bruto '+nf(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah)+'</div>':''}<div class="note">${fmt(r.ts)}<br>Oleh ${esc(r.operator)}</div>
+ <div class="row"><button class="btn sm" data-view="${r.id}">Lihat</button><button class="btn sm" data-edit="${r.id}">Edit</button><button class="btn sm" data-dl="${r.id}">Unduh</button><button class="btn danger sm" data-del="${r.id}">Hapus</button></div></div></div>`;
 }
 function draw(){
  $('cnt').textContent=rows.length+' foto';
@@ -468,6 +483,7 @@ function draw(){
 }
 function save(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
 $('days').onclick=async e=>{
+ const v=e.target.closest('[data-view],[data-edit]');if(v){openMd(v.dataset.view||v.dataset.edit,!!v.dataset.edit);return}
  const b=e.target.closest('button');if(!b)return;
  if(b.dataset.del){
   if(!b.dataset.arm){b.dataset.arm=1;b.textContent='Yakin hapus?';setTimeout(()=>{b.dataset.arm='';b.textContent='Hapus'},3000);return}
@@ -492,6 +508,52 @@ $('csv').onclick=async()=>{
  r.data.forEach(x=>lines.push([dk(x.ts),hm(x.ts),x.operator,x.cat,x.bruto??'',x.wadah??'',x.jumlah_wadah??'',x.kg,x.edited?'ya':'tidak',x.photo_path].map(q).join(',')));
  save(new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv'}),'data-oven-nt3-'+(sel||(cm.getFullYear()+'-'+String(cm.getMonth()+1).padStart(2,'0')))+'.csv');
 };
+/* ===== Lihat & edit foto (tim) ===== */
+let mid=null,lastFocus=null;
+function openMd(id,edit){lastFocus=document.activeElement;mid=id;$('md').hidden=false;document.body.style.overflow='hidden';renderMd(edit);$('mx').focus()}
+function closeMd(){$('md').hidden=true;document.body.style.overflow='';$('mf').innerHTML='';if(lastFocus&&lastFocus.focus)lastFocus.focus()}
+function renderMd(edit){
+ const i=rows.findIndex(r=>r.id===mid),r=rows[i];if(!r){closeMd();return}
+ $('mt').textContent=r.cat+': '+nf(r.kg)+' kg';
+ $('mi').src=r.url||'';$('mi').alt='Foto timbang '+r.cat+' oleh '+r.operator;
+ $('mc').innerHTML=fmt(r.ts)+' · Oleh '+esc(r.operator)+(r.wadah?'<br>Bruto '+nf(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah):'')+(r.edited?' <span class="note">(diedit)</span>':'');
+ $('mp').disabled=i<=0;$('mn').disabled=i>=rows.length-1;
+ $('mf').innerHTML='';if(edit)editMd(r);
+}
+function editMd(r){
+ $('mf').innerHTML=`<div class="edf"><label for="tc">Kategori</label><select id="tc">${CATS.map(c=>`<option${c===r.cat?' selected':''}>${c}</option>`).join('')}</select>
+ <label for="tb">Angka di layar timbangan (kg)</label><input type="text" id="tb" inputmode="decimal" autocomplete="off" value="${nf(r.bruto??r.kg)}">
+ <label for="tw">Jenis wadah</label><select id="tw"><option value="">Pilih wadah</option>${WADAH.map(([n])=>`<option${n===r.wadah?' selected':''}>${n}</option>`).join('')}</select>
+ <label for="tn">Jumlah wadah</label><input type="number" id="tn" min="1" max="30" value="${r.jumlah_wadah||1}">
+ <div class="net"><span class="note" id="tfx"></span><b id="tfn">–</b></div>
+ <div class="cta"><button class="btn sm" id="tsv">Simpan perubahan</button><button class="btn alt sm" id="tcx">Batal</button></div><div class="msg" id="tmsg" role="status"></div></div>`;
+ const calcT=()=>{const br=Math.abs(num($('tb').value)),n=Math.max(1,parseInt($('tn').value)||1),t=TARE[$('tw').value];
+  if(isNaN(br)||t==null){$('tfn').textContent='–';$('tfx').textContent='Isi angka dan pilih wadah';return null}
+  const tr=Math.round(t*n*100)/100,net=Math.round((br-tr)*100)/100;
+  if(net<0){$('tfn').textContent='–';$('tfx').textContent='Angka lebih kecil dari berat wadah ('+nf(tr)+' kg)';return null}
+  $('tfn').textContent=nf(net)+' kg';$('tfx').textContent=nf(br)+' − '+nf(tr)+' = berat bersih';return {br,n,net}};
+ ['tb','tw','tn'].forEach(i=>$(i).oninput=calcT);$('tw').onchange=calcT;calcT();
+ $('tcx').onclick=()=>{$('mf').innerHTML=''};
+ $('tsv').onclick=async()=>{const h=calcT(),m=$('tmsg');
+  if(!h){m.className='msg err';m.textContent='Lengkapi angka dan jenis wadah dulu.';return}
+  $('tsv').disabled=true;m.className='msg';m.textContent='Menyimpan…';
+  const {data,error}=await sb.rpc('koreksi_tim',{p_id:r.id,p_cat:$('tc').value,p_bruto:h.br,p_wadah:$('tw').value,p_jumlah:h.n,p_kg:h.net});
+  if(error||!data){m.className='msg err';m.textContent='Gagal menyimpan. Pastikan SQL tim-edit sudah dijalankan dan Anda masih masuk.';$('tsv').disabled=false;return}
+  await loadDay();renderMd(false);$('mf').innerHTML='<div class="msg ok">Perubahan tersimpan ✓</div>';
+ };
+}
+$('mx').onclick=closeMd;
+$('md').onclick=e=>{if(e.target===$('md'))closeMd()};
+$('mp').onclick=()=>{const i=rows.findIndex(r=>r.id===mid);if(i>0){mid=rows[i-1].id;renderMd(false)}};
+$('mn').onclick=()=>{const i=rows.findIndex(r=>r.id===mid);if(i>=0&&i<rows.length-1){mid=rows[i+1].id;renderMd(false)}};
+$('me').onclick=()=>{const r=rows.find(x=>x.id===mid);if(!r)return;if($('mf').innerHTML)$('mf').innerHTML='';else editMd(r)};
+addEventListener('keydown',e=>{
+ if($('md').hidden)return;
+ if(e.key==='Escape'){closeMd();return}
+ if(e.key==='Tab'){const f=[...$('md').querySelectorAll('button:not([disabled]),input,select')],a=document.activeElement;if(!f.length)return;
+  if(e.shiftKey&&a===f[0]){e.preventDefault();f[f.length-1].focus()}else if(!e.shiftKey&&a===f[f.length-1]){e.preventDefault();f[0].focus()}return}
+ if(!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){if(e.key==='ArrowLeft')$('mp').click();if(e.key==='ArrowRight')$('mn').click()}
+});
 /* ===== Navigasi kembali & keamanan sesi ===== */
 $('kb').onclick=()=>{if(history.state&&history.state.v&&history.state.v!=='home')history.back();else go('home',false,true)};
 addEventListener('popstate',e=>{const s=e.state||{v:'home'};if(s.v==='dash'&&!s.day)sel=null;go(s.v,true)});
