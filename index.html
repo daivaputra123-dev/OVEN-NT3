@@ -277,8 +277,8 @@ function paint(){
 }
 function packHtml(){
  const s=spx(kgm['TO'],kgm['GK AO'],kgm['BK AO']);
- return '<div class="pk"><b>Selisih packing: '+s.t+'</b> <span class="note">= (GK AO + BK AO) − TO</span>'+
-  (s.ok?(s.w?'<div class="warn">⚠ GK + BK lebih besar dari TO. Periksa lagi angka atau kategori yang diinput.</div>':''):'<div class="note">Muncul setelah TO, GK AO, dan BK AO terisi.</div>')+'</div>';
+ return '<div class="pk"><b>Selisih packing: '+s.t+'</b> <span class="note">= selisih TO dan (GK AO + BK AO). Plus (+) jika GK + BK lebih besar dari TO, minus (−) jika lebih kecil.</span>'+
+  (s.ok?(s.w?'<div class="warn">⚠ '+s.n+' Periksa lagi angka atau kategori yang diinput.</div>':''):'<div class="note">Muncul setelah TO, GK AO, dan BK AO terisi.</div>')+'</div>';
 }
 async function recapLoad(){
  if(!opn)return;
@@ -377,7 +377,7 @@ function drawRiw(d){
  const hari=d===dk(Date.now()),S=c=>rrows.filter(r=>r.cat===c),miss=WAJIB.filter(c=>!S(c).length);
  const tot=CATS.map(c=>{const a=S(c);return `<div class="stat"><b>${a.length?nf(a.reduce((s,r)=>s+Number(r.kg),0)):'–'}</b><span>${c} · ${a.length} timbang</span></div>`}).join('');
  const sm=c=>{const a=S(c);return a.length?a.reduce((s,r)=>s+Number(r.kg),0):null},sp=spx(sm('TO'),sm('GK AO'),sm('BK AO'));
- const pk=`<div class="pk"><b>Selisih packing: ${sp.t}</b> <span class="note">= (GK AO + BK AO) − TO</span>${sp.w?'<div class="warn">⚠ GK + BK lebih besar dari TO. Periksa lagi data tanggal ini.</div>':''}</div>`;
+ const pk=`<div class="pk"><b>Selisih packing: ${sp.t}</b> <span class="note">= selisih TO dan (GK AO + BK AO). Plus (+) jika GK + BK lebih besar dari TO, minus (−) jika lebih kecil.</span>${sp.w?'<div class="warn">⚠ '+sp.n+' Periksa lagi data tanggal ini.</div>':''}</div>`;
  $('rl').innerHTML=`<div class="stats" style="margin-top:12px">${tot}</div>${pk}`+(rrows.length?rrows.map(r=>`<div class="ent"><div><b>${esc(r.cat)}: ${nf(r.kg)} kg</b><div class="note">${hm(r.ts)}${r.wadah?' · '+nf(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah):''}</div></div><button class="btn sm" data-ed="${r.id}">Koreksi</button></div><div id="ef-${r.id}"></div>`).join(''):'<div class="empty">Belum ada timbangan di tanggal ini.</div>');
  $('fin2').hidden=!hari;$('fin2').disabled=!!miss.length;
  $('rmsg').className='msg';$('rmsg').textContent=hari&&miss.length?'Belum bisa selesai. Kurang: '+miss.join(', '):'';
@@ -418,9 +418,10 @@ const fmt=t=>new Date(t).toLocaleString('id-ID',{day:'2-digit',month:'short',yea
 const hm=t=>new Date(t).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',hour12:false}).replace(/\./g,':');
 const r2=x=>Math.round(x*100)/100;
 function spx(TO,GK,BK){
- if(TO==null||GK==null||BK==null)return {t:'–',w:false,ok:false};
+ if(TO==null||GK==null||BK==null)return {t:'–',w:false,ok:false,n:''};
  const d=Math.round(((GK+BK)-TO)*100)/100;
- return {t:(d>0?'+':d<0?'−':'')+nf(Math.abs(d))+' kg',w:d>0,ok:true};
+ const n=d>0?'Selisih plus: GK AO + BK AO lebih besar dari TO.':d<-2?'Selisih minus lebih dari 2 kg: TO lebih besar dari GK AO + BK AO.':'';
+ return {t:(d>0?'+':d<0?'−':'')+nf(Math.abs(d))+' kg',w:!!n,ok:true,n};
 }
 const p=(a,b)=>(a==null||!b)?'–':Math.abs(a/b*100).toFixed(2).replace('.',',')+'%';
 const BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -457,12 +458,12 @@ function drawCal(){
  const byD={};mrows.forEach(r=>(byD[dk(r.ts)]??=[]).push(r));
  const f=v=>v==null?'–':nf(v);
  const rowsHtml=Object.keys(byD).sort().reverse().map(d=>{const L=byD[d],s=c=>{const a=L.filter(r=>r.cat===c);return a.length?a.reduce((x,r)=>x+Math.abs(Number(r.kg)),0):null},ab=s('AB'),to=s('TO'),gk=s('GK AO'),bk=s('BK AO');
-  return `<tr data-d="${d}"><td>${Number(d.slice(8))} ${BULAN[m].slice(0,3)}</td><td>${f(ab)}</td><td>${f(to)}</td><td>${f(gk)}</td><td>${f(bk)}</td><td>${f(s('GJ'))}</td><td>${ab&&to!=null?p(ab-to,ab):'–'}</td><td>${p(gk,to)}</td><td>${p(bk,to)}</td><td>${spx(to,gk,bk).t}</td></tr>`}).join('');
+  return `<tr data-d="${d}"><td>${Number(d.slice(8))} ${BULAN[m].slice(0,3)}</td><td>${f(ab)}</td><td>${f(to)}</td><td>${f(gk)}</td><td>${f(bk)}</td><td>${f(s('GJ'))}</td><td>${ab&&to!=null?p(ab-to,ab):'–'}</td><td>${p(gk,to)}</td><td>${p(bk,to)}</td><td>${spx(to,gk,bk).t}${spx(to,gk,bk).w?' ⚠':''}</td></tr>`}).join('');
  $('cal').innerHTML=`<div class="nav"><button class="btn alt sm" id="pm" aria-label="Bulan sebelumnya">‹</button><h2>${BULAN[m]} ${y}</h2><button class="btn alt sm" id="nm" aria-label="Bulan berikutnya">›</button></div>
  <h3 class="sec">Total bulan ini</h3>${boxes(mrows)}
- <div class="stats"><div class="stat"><b>${AB&&TO?p(AB-TO,AB):'–'}</b><span>Susut oven (akumulasi)</span></div><div class="stat"><b>${p(GK,TO)}</b><span>%GK</span></div><div class="stat"><b>${p(BK,TO)}</b><span>%BK</span></div><div class="stat"><b>${SPM.t}</b><span>Selisih packing (akumulasi)</span></div></div>${SPM.w?'<div class="warn">⚠ GK + BK lebih besar dari TO</div>':''}${AB&&TO>AB?'<div class="warn">⚠ TO lebih besar dari AB</div>':''}
+ <div class="stats"><div class="stat"><b>${AB&&TO?p(AB-TO,AB):'–'}</b><span>Susut oven (akumulasi)</span></div><div class="stat"><b>${p(GK,TO)}</b><span>%GK</span></div><div class="stat"><b>${p(BK,TO)}</b><span>%BK</span></div><div class="stat"><b>${SPM.t}</b><span>Selisih packing (akumulasi)</span></div></div>${AB&&TO>AB?'<div class="warn">⚠ TO lebih besar dari AB</div>':''}
  <h3 class="sec">Pilih tanggal</h3><div class="cal">${cells}</div><p class="note">Tanda ✓ berarti ada operator yang sudah menekan Selesai.</p>
- <h3 class="sec">Hasil total per hari</h3>${rowsHtml?`<div style="overflow-x:auto"><table class="tb"><thead><tr><th>Tanggal</th><th>AB</th><th>TO</th><th>GK AO</th><th>BK AO</th><th>GJ</th><th>Susut</th><th>%GK</th><th>%BK</th><th>Selisih packing</th></tr></thead><tbody>${rowsHtml}</tbody></table></div><p class="note">Angka dalam kg. Klik satu baris untuk membuka hari itu.</p>`:'<div class="empty">Belum ada data bulan ini.</div>'}`;
+ <h3 class="sec">Hasil total per hari</h3>${rowsHtml?`<div style="overflow-x:auto"><table class="tb"><thead><tr><th>Tanggal</th><th>AB</th><th>TO</th><th>GK AO</th><th>BK AO</th><th>GJ</th><th>Susut</th><th>%GK</th><th>%BK</th><th>Selisih packing</th></tr></thead><tbody>${rowsHtml}</tbody></table></div><p class="note">Angka dalam kg. Klik satu baris untuk membuka hari itu. Tanda ⚠ pada Selisih packing berarti perlu diperiksa: hasil plus berapapun, atau minus lebih dari 2 kg.</p>`:'<div class="empty">Belum ada data bulan ini.</div>'}`;
  $('pm').onclick=()=>{cm=new Date(y,m-1,1);loadMonth()};$('nm').onclick=()=>{cm=new Date(y,m+1,1);loadMonth()};
 }
 $('cal').onclick=e=>{const b=e.target.closest('.dc,tr[data-d]');if(b&&b.dataset.d){sel=b.dataset.d;rows=[];history.pushState({v:'dash',day:1},'');loadDay()}};
@@ -482,7 +483,7 @@ function boxes(L){
 function hasilHari(L){
  const sum=c=>{const a=L.filter(r=>r.cat===c);return a.length?a.reduce((s,r)=>s+Math.abs(Number(r.kg)),0):null};
  const AB=sum('AB'),TO=sum('TO'),GK=sum('GK AO'),BK=sum('BK AO'),miss=WAJIB.filter(c=>!L.some(r=>r.cat===c)),SP=spx(TO,GK,BK);
- return `<div class="stats"><div class="stat"><b>${(AB&&TO!=null)?p(AB-TO,AB):'–'}</b><span>Susut oven</span></div><div class="stat"><b>${p(GK,TO)}</b><span>%GK</span></div><div class="stat"><b>${p(BK,TO)}</b><span>%BK</span></div><div class="stat"><b>${SP.t}</b><span>Selisih packing</span></div></div>${SP.w?'<div class="warn">⚠ GK + BK lebih besar dari TO. Cek foto dan angkanya.</div>':''}${(AB&&TO!=null&&TO>AB)?'<div class="warn">⚠ TO lebih besar dari AB. Cek foto dan angkanya.</div>':''}
+ return `<div class="stats"><div class="stat"><b>${(AB&&TO!=null)?p(AB-TO,AB):'–'}</b><span>Susut oven</span></div><div class="stat"><b>${p(GK,TO)}</b><span>%GK</span></div><div class="stat"><b>${p(BK,TO)}</b><span>%BK</span></div><div class="stat"><b>${SP.t}</b><span>Selisih packing</span></div></div>${SP.w?'<div class="warn">⚠ '+SP.n+' Cek foto dan angkanya.</div>':''}${(AB&&TO!=null&&TO>AB)?'<div class="warn">⚠ TO lebih besar dari AB. Cek foto dan angkanya.</div>':''}
  <p>${miss.length?'<span class="miss">Kurang: '+miss.join(', ')+'</span>':'<span class="okc">Semua kategori wajib lengkap ✓</span>'}</p>`;
 }
 function card(r){
