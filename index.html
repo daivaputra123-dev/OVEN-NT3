@@ -193,7 +193,7 @@ input[type=date],select{width:100%;padding:12px;border:2.5px solid var(--ink);bo
 <section class="view" id="v-riw"><div class="card">
  <h2>Riwayat &amp; koreksi</h2>
  <label for="rd">Tanggal</label><input type="date" id="rd">
- <div class="cta" style="margin:12px 0 0"><button class="btn" id="radd">+ Tambah foto timbang</button></div><p class="note" style="margin:6px 0 0">Untuk tanggal sebelumnya, pilih foto dari galeri agar waktunya sesuai foto aslinya.</p>
+ <div class="cta" style="margin:12px 0 0"><button class="btn" id="radd">+ Tambah foto timbang</button></div><p class="note" style="margin:6px 0 0">Foto yang ditambahkan akan dicatat di tanggal yang dipilih. Jam diambil dari foto, dan ditandai sebagai susulan.</p>
  <div id="rl"></div>
  <div class="cta"><button class="btn" id="fin2" hidden>Data sudah benar, selesai</button><button class="btn alt" onclick="go('op')">Kembali ke foto</button></div>
  <div class="msg" id="rmsg" role="status"></div>
@@ -237,6 +237,7 @@ function go(v,pop,rep){
  curV=v;$('kb').hidden=v==='home';
  document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
  clearInterval(timer);if(v==='dash'){load();timer=setInterval(load,30000)}
+ if(v!=='op')tgt=null;
  if(v==='op'){recapLoad();showBnr()}
  if(v==='riw'){$('rd').max=dk(Date.now());$('rd').value=$('rd').value||dk(Date.now());loadRiw()}
  hdr();scrollTo(0,0);
@@ -274,7 +275,7 @@ function paint(){
  [...$('cats').children].forEach(x=>{const c=x.dataset.c,n=recap[c]||0,on=c===cat;
   x.classList.toggle('on',on);x.setAttribute('aria-checked',on);x.innerHTML=c+'<small>'+(n?(kgm[c]!=null?nf(kgm[c])+' kg ✓':'✓')+(n>1?' · '+n+' foto':''):(c==='GJ'?'opsional':'belum'))+'</small>'});
  const got=WAJIB.filter(c=>recap[c]),miss=WAJIB.filter(c=>!recap[c]);
- $('recap').innerHTML='<b>Hari ini, '+esc(opn)+': '+got.length+' dari '+WAJIB.length+' kategori wajib</b>'+(recap['GJ']?' <span class="note">(+ GJ '+recap['GJ']+' foto)</span>':'')+'<div class="bar"><i style="width:'+(got.length/WAJIB.length*100)+'%"></i></div>'+
+ $('recap').innerHTML='<b>'+(tgt?'Tanggal '+new Date(tgt+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short'}):'Hari ini')+', '+esc(opn)+': '+got.length+' dari '+WAJIB.length+' kategori wajib</b>'+(recap['GJ']?' <span class="note">(+ GJ '+recap['GJ']+' foto)</span>':'')+'<div class="bar"><i style="width:'+(got.length/WAJIB.length*100)+'%"></i></div>'+
   (miss.length?'<span class="miss">Belum: '+miss.join(', ')+'</span>':'<span class="okc">Semua kategori wajib sudah terkumpul ✓</span>')+packHtml();
 }
 function packHtml(){
@@ -285,11 +286,11 @@ function packHtml(){
 async function recapLoad(){
  if(!opn)return;
  const t0=dk(Date.now());if(curDay&&curDay!==t0){cat=null;recap={};kgm={};selAt=null;reset()}curDay=t0;
- const a=new Date();a.setHours(0,0,0,0);
- const [r,s]=await Promise.all([sb.rpc('rekap_operator',{p_nama:opn,p_from:a.toISOString(),p_to:new Date(a.getTime()+864e5).toISOString()}),sb.rpc('status_selesai',{p_nama:opn,p_tanggal:t0})]);
+ const a=tgt?new Date(tgt+'T00:00:00'):new Date();a.setHours(0,0,0,0);
+ const [r,s]=await Promise.all([sb.rpc('rekap_operator',{p_nama:opn,p_from:a.toISOString(),p_to:new Date(a.getTime()+864e5).toISOString()}),sb.rpc('status_selesai',{p_nama:opn,p_tanggal:tgt||t0})]);
  if(!r.error&&r.data){recap={};kgm={};r.data.forEach(x=>{recap[x.cat]=Number(x.jumlah);kgm[x.cat]=x.kg==null?null:Number(x.kg)})}
  if(!s.error)selAt=s.data;
- $('sel').innerHTML=selAt?'<span class="okc">Selesai ✓ pukul '+hm(selAt)+'</span>':'<span class="note">Hari ini belum ditandai selesai</span>';
+ $('sel').innerHTML=selAt?'<span class="okc">Selesai ✓ pukul '+hm(selAt)+'</span>':'<span class="note">'+(tgt?'Tanggal ini':'Hari ini')+' belum ditandai selesai</span>';
  paint();
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&opn&&$('v-op').classList.contains('on'))recapLoad()});
@@ -312,6 +313,7 @@ function render(){
  c.width=W;c.height=H;x.drawImage(base,0,0);
  const dt=new Date(pend.ts),L=[pend.by+'  |  '+dt.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})+'  |  '+dt.toLocaleTimeString('id-ID',{hour12:false}).replace(/\./g,':')+'  |  '+pend.cat+(pend.gal?'  |  galeri':'')];
  if(hasil&&wad)L.push('Bersih: '+nf(hasil.net)+' kg  ('+nf(hasil.br)+' − '+(hasil.n>1?hasil.n+' × ':'')+wad[0]+' '+nf(wad[1])+')');
+ if(pend.susulan)L.push('Susulan, diinput '+new Date(pend.susulan).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).replace(/\./g,':'));
  const lh=Math.max(32,W/17);let fs=lh*.58;x.font='700 '+fs+'px Nunito,sans-serif';
  while(L.some(l=>x.measureText(l).width>W-34)&&fs>10){fs-=1;x.font='700 '+fs+'px Nunito,sans-serif'}
  const bh=lh*L.length+8;x.fillStyle='rgba(30,15,5,.88)';x.fillRect(0,H-bh,W,bh);x.textBaseline='middle';
@@ -329,11 +331,13 @@ function reset(){pend=null;clearWad();calc();$('form').hidden=true;$('pv').hidde
 $('file').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)proses(f,false)};
 $('gal').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)proses(f,true)};
 async function proses(f,gal){
- const ts=gal&&f.lastModified?f.lastModified:Date.now(),bmp=await createImageBitmap(f);
+ const real=gal&&f.lastModified?f.lastModified:Date.now(),bmp=await createImageBitmap(f);
+ let ts=real,susulan=null;
+ if(tgt&&dk(real)!==tgt){const [y,m,d]=tgt.split('-').map(Number),r=new Date(real);ts=new Date(y,m-1,d,r.getHours(),r.getMinutes(),r.getSeconds()).getTime();susulan=Date.now()}
  const W=Math.min(800,bmp.width),H=Math.round(bmp.height*W/bmp.width);
  base=document.createElement('canvas');base.width=W;base.height=H;base.getContext('2d').drawImage(bmp,0,0,W,H);
  const b64=base.toDataURL('image/jpeg',.8).split(',')[1],dt=new Date(ts);
- pend={cat,ts,by:opn,gal};
+ pend={cat,ts,by:opn,gal,susulan};
  $('pv').hidden=false;$('pvE').hidden=true;$('form').hidden=false;$('stamp').textContent=dt.toLocaleString('id-ID',{hour12:false}).replace(/\./g,':');$('kg').value='';$('omsg').textContent='';clearWad();calc();
  detect(b64);
 };
@@ -367,13 +371,12 @@ $('save').onclick=async()=>{
 /* ===== Riwayat & koreksi operator ===== */
 const TARE=Object.fromEntries(WADAH);
 $('riw').onclick=$('fin').onclick=()=>go('riw');
-let addFor=null;
-$('radd').onclick=()=>{addFor=$('rd').value||null;go('op')};
+let tgt=null;
+$('radd').onclick=()=>{const d=$('rd').value;tgt=(d&&d!==dk(Date.now()))?d:null;go('op')};
 function showBnr(){
- const b=$('bnr'),today=dk(Date.now());
- if(addFor&&addFor!==today){b.hidden=false;b.textContent='Menambah foto untuk '+new Date(addFor+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})+'. Pilih dari galeri agar waktunya sesuai foto aslinya. Foto dari kamera tercatat sebagai hari ini.'}
+ const b=$('bnr');
+ if(tgt){b.hidden=false;b.innerHTML='Mode susulan: foto dicatat di tanggal '+new Date(tgt+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})+'. Jam diambil dari foto, dan ditandai sebagai susulan. <button class="btn alt sm" id="bnx" style="margin-top:8px">Kembali ke hari ini</button>';$('bnx').onclick=()=>{tgt=null;showBnr();recapLoad()}}
  else b.hidden=true;
- addFor=null;
 }
 $('rd').onchange=loadRiw;
 async function loadRiw(){
@@ -497,7 +500,7 @@ function hasilHari(L){
  <p>${miss.length?'<span class="miss">Kurang: '+miss.join(', ')+'</span>':'<span class="okc">Semua kategori wajib lengkap ✓</span>'}</p>`;
 }
 function card(r){
- return `<div class="ph"><img data-view="${r.id}" src="${r.url||''}" alt="Foto ${esc(r.cat)}, klik untuk memperbesar" loading="lazy"><div><b>${esc(r.cat)}: ${nf(r.kg)} kg</b>${r.edited?' <span class="note">(diedit)</span>':''}${r.wadah?'<div class="note">Bruto '+nf(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah)+'</div>':''}<div class="note">${fmt(r.ts)}<br>Oleh ${esc(r.operator)}</div>
+ return `<div class="ph"><img data-view="${r.id}" src="${r.url||''}" alt="Foto ${esc(r.cat)}, klik untuk memperbesar" loading="lazy"><div><b>${esc(r.cat)}: ${nf(r.kg)} kg</b>${r.edited?' <span class="note">(diedit)</span>':''}${r.wadah?'<div class="note">Bruto '+nf(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah)+'</div>':''}<div class="note">${fmt(r.ts)}${r.dibuat_at&&dk(r.dibuat_at)!==dk(r.ts)?'<br><b>Susulan</b>, diinput '+fmt(r.dibuat_at):''}<br>Oleh ${esc(r.operator)}</div>
  <div class="row"><button class="btn sm" data-view="${r.id}">Lihat</button><button class="btn sm" data-edit="${r.id}">Edit</button><button class="btn sm" data-dl="${r.id}">Unduh</button><button class="btn danger sm" data-del="${r.id}">Hapus</button></div></div></div>`;
 }
 function draw(){
@@ -542,7 +545,7 @@ function renderMd(edit){
  const i=rows.findIndex(r=>r.id===mid),r=rows[i];if(!r){closeMd();return}
  $('mt').textContent=r.cat+': '+nf(r.kg)+' kg';
  $('mi').src=r.url||'';$('mi').alt='Foto timbang '+r.cat+' oleh '+r.operator;
- $('mc').innerHTML=fmt(r.ts)+' · Oleh '+esc(r.operator)+(r.wadah?'<br>Bruto '+nf(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah):'')+(r.edited?' <span class="note">(diedit)</span>':'');
+ $('mc').innerHTML=fmt(r.ts)+(r.dibuat_at&&dk(r.dibuat_at)!==dk(r.ts)?' (<b>susulan</b>, diinput '+fmt(r.dibuat_at)+')':'')+' · Oleh '+esc(r.operator)+(r.wadah?'<br>Bruto '+nf(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah):'')+(r.edited?' <span class="note">(diedit)</span>':'');
  $('mp').disabled=i<=0;$('mn').disabled=i>=rows.length-1;
  $('mf').innerHTML='';if(edit)editMd(r);
 }
