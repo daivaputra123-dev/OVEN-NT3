@@ -162,6 +162,7 @@ input[type=date],select{width:100%;padding:12px;border:2.5px solid var(--ink);bo
 
 <section class="view" id="v-op"><div class="card">
  <h2>Foto hasil timbangan</h2>
+ <div class="recap" id="bnr" hidden role="status" style="margin:8px 0;font-weight:800"></div>
  <div class="recap" id="recap" aria-live="polite"></div>
  <div class="cta" style="margin-top:12px"><button class="btn alt sm" id="riw">Riwayat &amp; koreksi</button><button class="btn sm" id="fin">Selesai</button></div><div id="sel" style="margin-top:8px"></div>
  <div class="step"><i>1</i>Pilih kategori</div>
@@ -192,6 +193,7 @@ input[type=date],select{width:100%;padding:12px;border:2.5px solid var(--ink);bo
 <section class="view" id="v-riw"><div class="card">
  <h2>Riwayat &amp; koreksi</h2>
  <label for="rd">Tanggal</label><input type="date" id="rd">
+ <div class="cta" style="margin:12px 0 0"><button class="btn" id="radd">+ Tambah foto timbang</button></div><p class="note" style="margin:6px 0 0">Untuk tanggal sebelumnya, pilih foto dari galeri agar waktunya sesuai foto aslinya.</p>
  <div id="rl"></div>
  <div class="cta"><button class="btn" id="fin2" hidden>Data sudah benar, selesai</button><button class="btn alt" onclick="go('op')">Kembali ke foto</button></div>
  <div class="msg" id="rmsg" role="status"></div>
@@ -235,7 +237,7 @@ function go(v,pop,rep){
  curV=v;$('kb').hidden=v==='home';
  document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
  clearInterval(timer);if(v==='dash'){load();timer=setInterval(load,30000)}
- if(v==='op')recapLoad();
+ if(v==='op'){recapLoad();showBnr()}
  if(v==='riw'){$('rd').max=dk(Date.now());$('rd').value=$('rd').value||dk(Date.now());loadRiw()}
  hdr();scrollTo(0,0);
 }
@@ -365,6 +367,14 @@ $('save').onclick=async()=>{
 /* ===== Riwayat & koreksi operator ===== */
 const TARE=Object.fromEntries(WADAH);
 $('riw').onclick=$('fin').onclick=()=>go('riw');
+let addFor=null;
+$('radd').onclick=()=>{addFor=$('rd').value||null;go('op')};
+function showBnr(){
+ const b=$('bnr'),today=dk(Date.now());
+ if(addFor&&addFor!==today){b.hidden=false;b.textContent='Menambah foto untuk '+new Date(addFor+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})+'. Pilih dari galeri agar waktunya sesuai foto aslinya. Foto dari kamera tercatat sebagai hari ini.'}
+ else b.hidden=true;
+ addFor=null;
+}
 $('rd').onchange=loadRiw;
 async function loadRiw(){
  const d=$('rd').value||dk(Date.now()),a=new Date(d+'T00:00:00');
