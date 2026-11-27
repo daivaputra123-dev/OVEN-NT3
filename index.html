@@ -276,7 +276,11 @@ function paint(){
   x.classList.toggle('on',on);x.setAttribute('aria-checked',on);x.innerHTML=c+'<small>'+(n?(kgm[c]!=null?nf(kgm[c])+' kg ✓':'✓')+(n>1?' · '+n+' foto':''):(c==='GJ'?'opsional':'belum'))+'</small>'});
  const got=WAJIB.filter(c=>recap[c]),miss=WAJIB.filter(c=>!recap[c]);
  $('recap').innerHTML='<b>'+(tgt?'Tanggal '+new Date(tgt+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short'}):'Hari ini')+', '+esc(opn)+': '+got.length+' dari '+WAJIB.length+' kategori wajib</b>'+(recap['GJ']?' <span class="note">(+ GJ '+recap['GJ']+' foto)</span>':'')+'<div class="bar"><i style="width:'+(got.length/WAJIB.length*100)+'%"></i></div>'+
-  (miss.length?'<span class="miss">Belum: '+miss.join(', ')+'</span>':'<span class="okc">Semua kategori wajib sudah terkumpul ✓</span>')+packHtml();
+  (miss.length?'<span class="miss">Belum: '+miss.join(', ')+'</span>':'<span class="okc">Semua kategori wajib sudah terkumpul ✓</span>')+ovenBox(kgm['AB'],kgm['TO'])+packHtml();
+}
+function ovenBox(AB,TO){
+ const ok=AB!=null&&TO!=null&&AB>0,v=ok?Math.abs((AB-TO)/AB*100).toFixed(2).replace('.',',')+'%':'–';
+ return '<div class="pk"><b>Susut oven: '+v+'</b> <span class="note">= (AB − TO) ÷ AB</span>'+(ok?(TO>AB?'<div class="warn">⚠ TO lebih besar dari AB. Periksa lagi angka atau kategorinya.</div>':''):'<div class="note">Muncul setelah AB dan TO terisi.</div>')+'</div>';
 }
 function packHtml(){
  const s=spx(kgm['TO'],kgm['GK AO'],kgm['BK AO']);
@@ -391,7 +395,7 @@ function drawRiw(d){
  const tot=CATS.map(c=>{const a=S(c);return `<div class="stat"><b>${a.length?nf(a.reduce((s,r)=>s+Number(r.kg),0)):'–'}</b><span>${c} · ${a.length} timbang</span></div>`}).join('');
  const sm=c=>{const a=S(c);return a.length?a.reduce((s,r)=>s+Number(r.kg),0):null},sp=spx(sm('TO'),sm('GK AO'),sm('BK AO'));
  const pk=`<div class="pk"><b>Selisih packing: ${sp.t}</b> <span class="note">= selisih TO dan (GK AO + BK AO). Plus (+) jika GK + BK lebih besar dari TO, minus (−) jika lebih kecil.</span>${sp.w?'<div class="warn">⚠ '+sp.n+' Periksa lagi data tanggal ini.</div>':''}</div>`;
- $('rl').innerHTML=`<div class="stats" style="margin-top:12px">${tot}</div>${pk}`+(rrows.length?rrows.map(r=>`<div class="ent"><div><b>${esc(r.cat)}: ${nf(r.kg)} kg</b><div class="note">${hm(r.ts)}${r.wadah?' · '+nf(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah):''}</div></div><button class="btn sm" data-ed="${r.id}">Koreksi</button></div><div id="ef-${r.id}"></div>`).join(''):'<div class="empty">Belum ada timbangan di tanggal ini.</div>');
+ $('rl').innerHTML=`<div class="stats" style="margin-top:12px">${tot}</div>${ovenBox(sm('AB'),sm('TO'))}${pk}`+(rrows.length?rrows.map(r=>`<div class="ent"><div><b>${esc(r.cat)}: ${nf(r.kg)} kg</b><div class="note">${hm(r.ts)}${r.wadah?' · '+nf(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah):''}</div></div><button class="btn sm" data-ed="${r.id}">Koreksi</button></div><div id="ef-${r.id}"></div>`).join(''):'<div class="empty">Belum ada timbangan di tanggal ini.</div>');
  $('fin2').hidden=!hari;$('fin2').disabled=!!miss.length;
  $('rmsg').className='msg';$('rmsg').textContent=hari&&miss.length?'Belum bisa selesai. Kurang: '+miss.join(', '):'';
 }
