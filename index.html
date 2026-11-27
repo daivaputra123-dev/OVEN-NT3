@@ -276,16 +276,15 @@ function paint(){
   x.classList.toggle('on',on);x.setAttribute('aria-checked',on);x.innerHTML=c+'<small>'+(n?(kgm[c]!=null?nf(kgm[c])+' kg ✓':'✓')+(n>1?' · '+n+' foto':''):(c==='GJ'?'opsional':'belum'))+'</small>'});
  const got=WAJIB.filter(c=>recap[c]),miss=WAJIB.filter(c=>!recap[c]);
  $('recap').innerHTML='<b>'+(tgt?'Tanggal '+new Date(tgt+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short'}):'Hari ini')+', '+esc(opn)+': '+got.length+' dari '+WAJIB.length+' kategori wajib</b>'+(recap['GJ']?' <span class="note">(+ GJ '+recap['GJ']+' foto)</span>':'')+'<div class="bar"><i style="width:'+(got.length/WAJIB.length*100)+'%"></i></div>'+
-  (miss.length?'<span class="miss">Belum: '+miss.join(', ')+'</span>':'<span class="okc">Semua kategori wajib sudah terkumpul ✓</span>')+ovenBox(kgm['AB'],kgm['TO'])+packHtml();
+  (miss.length?'<span class="miss">Belum: '+miss.join(', ')+'</span>':'<span class="okc">Semua kategori wajib sudah terkumpul ✓</span>')+hasilBoxes(kgm['AB'],kgm['TO'],kgm['GK AO'],kgm['BK AO']);
 }
-function ovenBox(AB,TO){
- const ok=AB!=null&&TO!=null&&AB>0,v=ok?Math.abs((AB-TO)/AB*100).toFixed(2).replace('.',',')+'%':'–';
- return '<div class="pk"><b>Susut oven: '+v+'</b> <span class="note">= (AB − TO) ÷ AB</span>'+(ok?(TO>AB?'<div class="warn">⚠ TO lebih besar dari AB. Periksa lagi angka atau kategorinya.</div>':''):'<div class="note">Muncul setelah AB dan TO terisi.</div>')+'</div>';
-}
-function packHtml(){
- const s=spx(kgm['TO'],kgm['GK AO'],kgm['BK AO']);
- return '<div class="pk"><b>Selisih packing: '+s.t+'</b> <span class="note">= selisih TO dan (GK AO + BK AO). Plus (+) jika GK + BK lebih besar dari TO, minus (−) jika lebih kecil.</span>'+
-  (s.ok?(s.w?'<div class="warn">⚠ '+s.n+' Periksa lagi angka atau kategori yang diinput.</div>':''):'<div class="note">Muncul setelah TO, GK AO, dan BK AO terisi.</div>')+'</div>';
+function hasilBoxes(AB,TO,GK,BK,ctx){
+ const okO=AB!=null&&TO!=null&&AB>0,vO=okO?Math.abs((AB-TO)/AB*100).toFixed(2).replace('.',',')+'%':'–',s=spx(TO,GK,BK);
+ return '<div class="stats" style="margin-top:12px"><div class="stat"><b>'+vO+'</b><span>Susut oven</span></div><div class="stat"><b>'+s.t+'</b><span>Selisih packing</span></div></div>'+
+  (okO&&TO>AB?'<div class="warn">⚠ TO lebih besar dari AB. Periksa lagi angka atau kategorinya.</div>':'')+
+  (s.w?'<div class="warn">⚠ '+s.n+' Periksa lagi '+(ctx||'angka atau kategori yang diinput')+'.</div>':'')+
+  ((okO&&s.ok)?'':'<div class="note">'+(okO?'':'Susut oven menunggu AB dan TO. ')+(s.ok?'':'Selisih packing menunggu TO, GK AO, dan BK AO.')+'</div>')+
+  '<div class="note" style="margin-top:6px">Susut oven = (AB − TO) ÷ AB. Selisih packing: plus (+) jika GK AO + BK AO lebih besar dari TO, minus (−) jika lebih kecil.</div>';
 }
 async function recapLoad(){
  if(!opn)return;
@@ -393,9 +392,8 @@ async function loadRiw(){
 function drawRiw(d){
  const hari=d===dk(Date.now()),S=c=>rrows.filter(r=>r.cat===c),miss=WAJIB.filter(c=>!S(c).length);
  const tot=CATS.map(c=>{const a=S(c);return `<div class="stat"><b>${a.length?nf(a.reduce((s,r)=>s+Number(r.kg),0)):'–'}</b><span>${c} · ${a.length} timbang</span></div>`}).join('');
- const sm=c=>{const a=S(c);return a.length?a.reduce((s,r)=>s+Number(r.kg),0):null},sp=spx(sm('TO'),sm('GK AO'),sm('BK AO'));
- const pk=`<div class="pk"><b>Selisih packing: ${sp.t}</b> <span class="note">= selisih TO dan (GK AO + BK AO). Plus (+) jika GK + BK lebih besar dari TO, minus (−) jika lebih kecil.</span>${sp.w?'<div class="warn">⚠ '+sp.n+' Periksa lagi data tanggal ini.</div>':''}</div>`;
- $('rl').innerHTML=`<div class="stats" style="margin-top:12px">${tot}</div>${ovenBox(sm('AB'),sm('TO'))}${pk}`+(rrows.length?rrows.map(r=>`<div class="ent"><div><b>${esc(r.cat)}: ${nf(r.kg)} kg</b><div class="note">${hm(r.ts)}${r.wadah?' · '+nf(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah):''}</div></div><button class="btn sm" data-ed="${r.id}">Koreksi</button></div><div id="ef-${r.id}"></div>`).join(''):'<div class="empty">Belum ada timbangan di tanggal ini.</div>');
+ const sm=c=>{const a=S(c);return a.length?a.reduce((s,r)=>s+Number(r.kg),0):null};
+ $('rl').innerHTML=`<div class="stats" style="margin-top:12px">${tot}</div>${hasilBoxes(sm('AB'),sm('TO'),sm('GK AO'),sm('BK AO'),'data tanggal ini')}`+(rrows.length?rrows.map(r=>`<div class="ent"><div><b>${esc(r.cat)}: ${nf(r.kg)} kg</b><div class="note">${hm(r.ts)}${r.wadah?' · '+nf(r.bruto)+' − '+(r.jumlah_wadah>1?r.jumlah_wadah+' × ':'')+esc(r.wadah):''}</div></div><button class="btn sm" data-ed="${r.id}">Koreksi</button></div><div id="ef-${r.id}"></div>`).join(''):'<div class="empty">Belum ada timbangan di tanggal ini.</div>');
  $('fin2').hidden=!hari;$('fin2').disabled=!!miss.length;
  $('rmsg').className='msg';$('rmsg').textContent=hari&&miss.length?'Belum bisa selesai. Kurang: '+miss.join(', '):'';
 }
