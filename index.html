@@ -482,7 +482,7 @@ function drawCal(){
  $('pm').onclick=()=>{cm=new Date(y,m-1,1);loadMonth()};$('nm').onclick=()=>{cm=new Date(y,m+1,1);loadMonth()};
 }
 $('cal').onclick=e=>{const b=e.target.closest('.dc,tr[data-d]');if(b&&b.dataset.d){sel=b.dataset.d;rows=[];history.pushState({v:'dash',day:1},'');loadDay()}};
-$('back').onclick=()=>history.back();
+$('back').onclick=()=>{if(history.state&&history.state.day)history.back();else{sel=null;rows=[];loadMonth()}};
 async function loadDay(){
  bar();
  const a=new Date(sel+'T00:00:00'),r=await fetchRange(a,new Date(a.getTime()+864e5),'*');
@@ -587,7 +587,12 @@ addEventListener('keydown',e=>{
 });
 /* ===== Navigasi kembali & keamanan sesi ===== */
 $('kb').onclick=()=>{if(history.state&&history.state.v&&history.state.v!=='home')history.back();else go('home',false,true)};
-addEventListener('popstate',e=>{const s=e.state||{v:'home'};if(s.v==='dash'&&!s.day)sel=null;go(s.v,true)});
+addEventListener('popstate',e=>{
+ let s=e.state||{v:'home'};
+ if(curV==='dash'&&sel&&s.v!=='dash'){s={v:'dash'};history.pushState(s,'')}
+ if(s.v==='dash'&&!s.day)sel=null;
+ go(s.v,true);
+});
 history.replaceState({v:'home'},'');
 let idle=null,fails=0;
 function touch(){clearTimeout(idle);if(!user)return;idle=setTimeout(async()=>{await sb.auth.signOut();user=null;rows=[];mrows=[];$('lmsg').textContent='Sesi berakhir karena lama tidak aktif. Silakan masuk lagi.';hdr();go('home',false,true)},20*60*1000)}
